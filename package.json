@@ -1,0 +1,20 @@
+{
+  "name": "beyond-cgpa-workspace",
+  "version": "1.0.0",
+  "description": "BeyondCGPA — Career Companion & Intelligence Engine for Engineering Students",
+  "scripts": {
+    "server": "cd server && npm start",
+    "client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "install-all": "cd server && npm install && cd ../client && npm install"
+  },
+  "keywords": [
+    "career",
+    "cie",
+    "engineering",
+    "adaptive-learning",
+    "roadmap"
+  ],
+  "author": "BeyondCGPA Team",
+  "license": "ISC"
+}
