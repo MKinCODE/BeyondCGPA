@@ -10,9 +10,7 @@ const { config, getConfigDiagnostics } = require('../config/env');
 const googleClient = config.GOOGLE_CLIENT_ID ? new OAuth2Client(config.GOOGLE_CLIENT_ID) : null;
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, config.JWT_SECRET, {
-    expiresIn: config.JWT_EXPIRES_IN
-  });
+  return jwt.sign({ id }, config.JWT_SECRET);
 };
 
 /**
