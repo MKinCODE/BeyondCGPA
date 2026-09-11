@@ -20,6 +20,77 @@ import { mentorAPI } from '../services/api';
 import { useCIE } from '../context/CIEContext';
 import { useAuth } from '../context/AuthContext';
 
+const FormattedMessage = ({ text }) => {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+
+  return (
+    <div className="space-y-1.5 leading-relaxed">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={idx} className="h-1.5" />;
+        }
+
+        const isBullet = /^[•\-\*]\s+/.test(trimmed);
+        const lineContent = isBullet ? trimmed.replace(/^[•\-\*]\s+/, '') : line;
+
+        const parseInline = (str) => {
+          const tokens = [];
+          const regex = /(\*\*.*?\*\*|`.*?`|\*.*?\*)/g;
+          let lastIdx = 0;
+          let match;
+
+          while ((match = regex.exec(str)) !== null) {
+            if (match.index > lastIdx) {
+              tokens.push(str.substring(lastIdx, match.index));
+            }
+            const matchText = match[0];
+            if (matchText.startsWith('**') && matchText.endsWith('**')) {
+              tokens.push(
+                <strong key={tokens.length} className="font-bold text-[#0B172A]">
+                  {matchText.slice(2, -2)}
+                </strong>
+              );
+            } else if (matchText.startsWith('`') && matchText.endsWith('`')) {
+              tokens.push(
+                <code key={tokens.length} className="px-1.5 py-0.5 rounded bg-[#E2E8F0] font-mono text-[11px] text-[#087F73] font-semibold">
+                  {matchText.slice(1, -1)}
+                </code>
+              );
+            } else if (matchText.startsWith('*') && matchText.endsWith('*')) {
+              tokens.push(
+                <em key={tokens.length} className="italic text-[#64748B]">
+                  {matchText.slice(1, -1)}
+                </em>
+              );
+            }
+            lastIdx = regex.lastIndex;
+          }
+
+          if (lastIdx < str.length) {
+            tokens.push(str.substring(lastIdx));
+          }
+
+          return tokens;
+        };
+
+        if (isBullet) {
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-1 my-0.5">
+              <span className="text-[#12B8A6] font-bold select-none text-xs leading-5">•</span>
+              <span className="flex-1">{parseInline(lineContent)}</span>
+            </div>
+          );
+        }
+
+        return <div key={idx}>{parseInline(lineContent)}</div>;
+      })}
+    </div>
+  );
+};
+
 export const MentorPage = () => {
   const { user } = useAuth();
   const { profile, roadmap, todaysFocus } = useCIE();
@@ -203,13 +274,13 @@ export const MentorPage = () => {
                   <div
                     className={`max-w-[82%] sm:max-w-[75%] p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                       isUser
-                        ? 'bg-[#0B172A] text-white rounded-tr-none'
+                        ? 'bg-[#0B172A] text-white rounded-tr-none whitespace-pre-line'
                         : msg.isError
-                          ? 'bg-rose-50 text-rose-900 border border-rose-200 rounded-tl-none whitespace-pre-line shadow-2xs'
-                          : 'bg-[#F8FAFC] text-[#0B172A] border border-[#E2E8F0] rounded-tl-none whitespace-pre-line shadow-2xs'
+                          ? 'bg-rose-50 text-rose-900 border border-rose-200 rounded-tl-none shadow-2xs'
+                          : 'bg-[#F8FAFC] text-[#0B172A] border border-[#E2E8F0] rounded-tl-none shadow-2xs'
                     }`}
                   >
-                    {msg.text}
+                    {isUser ? msg.text : <FormattedMessage text={msg.text} />}
                   </div>
                 </div>
               );

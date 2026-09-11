@@ -29,12 +29,10 @@ class NvidiaProvider {
     const apiKey = this.getApiKey();
     const configuredModel = this.getModel();
 
-    // Universal models on NVIDIA NIM free developer tier
+    // Streamlined universal models on NVIDIA NIM free developer tier
     const candidateModels = Array.from(new Set([
       configuredModel,
-      'mistralai/mistral-7b-instruct-v0.3',
-      'meta/llama-3.2-11b-vision-instruct',
-      'ibm/granite-3.0-8b-instruct'
+      'mistralai/mistral-7b-instruct-v0.3'
     ]));
 
     const formattedMessages = [
