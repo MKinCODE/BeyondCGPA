@@ -1,55 +1,170 @@
 class HeuristicProvider {
-  generateMentorResponse(studentContext, userMessage) {
-    const text = userMessage.toLowerCase();
-    const { profile, activeRoadmap, todaysFocus, remainingUnits, completedUnits } = studentContext;
+  generateMentorResponse(studentContext, arg2, arg3) {
+    let conversationHistory = [];
+    let userMessage = '';
+    if (typeof arg2 === 'string') {
+      userMessage = arg2;
+      conversationHistory = [];
+    } else {
+      conversationHistory = Array.isArray(arg2) ? arg2 : [];
+      userMessage = typeof arg3 === 'string' ? arg3 : '';
+    }
+
+    const text = (userMessage || '').toLowerCase().trim();
+    const {
+      profile = {},
+      activeRoadmap = {},
+      todaysFocus = {},
+      recentProgress = [],
+      cieDerived = profile?.cieDerived || studentContext.cieDerived || {},
+      onboardingAnswers = profile?.rawAnswers || studentContext.onboardingAnswers || {},
+      user = studentContext.user || {}
+    } = studentContext;
 
     const domain = profile?.targetDomain || 'Engineering';
     const weeklyHours = profile?.weeklyHours || 14;
-    const focusTitle = todaysFocus?.topic?.title || 'Core DSA / System Foundations';
+    const preferredPace = profile?.preferredPace || 'Balanced';
+    const targetCompanies = (profile?.targetCompaniesCategory || []).join(', ') || 'Product companies & Startups';
+    const totalUnits = activeRoadmap?.totalAllocatedUnits || studentContext.totalUnits || 0;
+    const remainingUnits = activeRoadmap?.remainingUnits ?? (studentContext.remainingUnits || 0);
+    const completedUnits = activeRoadmap?.completedUnits ?? (studentContext.completedUnits || 0);
+
+    const focusTopic = todaysFocus?.topic?.title || 'Core Foundations';
+    const focusCat = todaysFocus?.topic?.category || todaysFocus?.category || 'Foundations';
+    const focusReason = todaysFocus?.reason || 'High-leverage preparation priority';
+    const isReinforcement = Boolean(todaysFocus?.isReinforcement);
+    const actionableTask = todaysFocus?.actionableTask;
+
+    const readiness = cieDerived.readinessHorizon || {};
+    const pacing = cieDerived.pacingHealth || {};
+    const velocity = Number(cieDerived.velocityMultiplier || 1.0).toFixed(2);
+    const dailyTargetUnits = pacing.dailyTargetUnits || (weeklyHours / 10).toFixed(1);
+    const driftUnits = pacing.driftUnits || 0;
 
     let reply = '';
     let suggestions = [];
 
-    if (text.includes('roadmap') || text.includes('plan') || text.includes('where to start')) {
-      reply = `Based on your **${domain}** track and your **${weeklyHours} hrs/week** schedule, your adaptive roadmap currently has **${remainingUnits} learning units remaining** (with **${completedUnits} completed**).\n\nYour immediate high-leverage focus is **${focusTitle}**. Remember: BeyondCGPA tracks learning workload, not calendar streaks. If you miss a day, there's zero penalty—simply pick up your remaining effort units when you return!`;
+    // 1. Pacing, Workload, Overwhelm, "Too fast", "Too slow", "Falling behind", Schedule
+    if (/\b(too fast|fast for me|slow down|slow it down|too slow|overwhelm|overwhelmed|falling behind|behind|can't keep up|cannot keep up|burnout|too much|pacing|pace|hours|schedule|daily target|drift|exhausted|reduce pace)\b/i.test(text)) {
+      reply = `I completely understand—balancing university commitments and rigorous technical preparation can easily feel overwhelming.
+
+Here is how your preparation is currently structured in CIE:
+• **Weekly Availability:** ${weeklyHours} hours/week (~${dailyTargetUnits} effort units/day)
+• **Current Workload:** **${remainingUnits} learning units remaining** across your ${domain} roadmap
+• **Active Topic:** **${focusTopic}** (${focusCat})
+
+**Core BeyondCGPA Principle: Workload Units, NOT Calendar Streaks**
+In BeyondCGPA, there is **zero penalty** for taking a break or moving at a calmer pace. Missed days do not hurt your standing or break streaks—your remaining effort units simply stay preserved until you return.
+
+**Recommended Adjustments:**
+1. **Reduce Weekly Commitment:** If ${weeklyHours} hrs/week feels too intense, adjust your availability to **8–10 hours/week** in your profile settings. The Career Intelligence Engine will automatically stretch your horizon to a sustainable pace.
+2. **Switch to Deep Foundation:** In Settings, you can change your pace to **DeepFoundation**, which provisions extra reinforcement units.
+3. **Chunk Today's Focus:** Don't attempt to finish **${focusTopic}** in one marathon session. Break it down into a single 25-minute focused interval today.`;
+
       suggestions = [
-        'How should I approach today\'s focus topic?',
-        'How does my readiness horizon change if I increase weekly hours?',
-        'What projects should I build for product companies?'
+        `Break down ${focusTopic} into smaller steps`,
+        'How does CIE adapt my horizon if I slow down?',
+        'What should I prepare today?'
       ];
-    } else if (text.includes('today') || text.includes('focus') || text.includes('practice')) {
-      reply = `For today, your preparation focus is **${focusTitle}** in the **${todaysFocus?.topic?.category || 'DSA'}** track.\n\nRecommended strategy:\n1. Dedicate **45-60 minutes** without multitasking.\n2. Understand the underlying pattern (e.g. state invariants, pointers, space-time tradeoffs) before coding.\n3. Log your effort unit once done so the Career Intelligence Engine adapts your horizon accurately.`;
+    }
+    // 2. Today's Focus & Active Practice Guidance
+    else if (/\b(today|focus|practice|what should i (do|study|learn|prepare)|start|where do i start|next step|actionable|task|action)\b/i.test(text)) {
+      reply = `For today, your high-leverage focus is **${focusTopic}** in the **${focusCat}** track.
+
+**Why CIE Prioritized This:**
+${focusReason}${isReinforcement ? '\n*(CIE marked this as a Reinforcement Unit to consolidate your conceptual foundation before advancing.)*' : ''}
+
+**Recommended Execution Strategy:**
+1. **Dedicated Focus:** Set aside **35–45 minutes** without multitasking.
+2. **Understand the Pattern:** Before writing code, make sure you can explain the core mechanism (state invariants, edge cases, space-time tradeoffs).
+${actionableTask ? `3. **Active Practice:** Tackle **"${actionableTask.title}"** (${actionableTask.platform || 'LeetCode'}, **${actionableTask.difficulty || 'Medium'}**).\n4. **Log Effort:** Log your unit once completed so CIE calibrates your next unblocked topic accurately.` : '3. **Log Effort:** Log your effort unit upon completion so CIE updates your readiness horizon.'}`;
+
       suggestions = [
-        `Explain the core pattern in ${focusTitle}`,
+        `Explain the core pattern in ${focusTopic}`,
         'Give me a problem walkthrough',
-        'Mark unit complete'
+        'How many units are left in this phase?'
       ];
-    } else if (text.includes('dsa') || text.includes('algorithm') || text.includes('data structure')) {
-      reply = `In DSA preparation, consistency in understanding patterns beats memorizing code. Focus on the progression: **Arrays/Strings → Two Pointers & Sliding Window → Hash Maps → Trees & Graphs → Dynamic Programming**.\n\nNever rush to read solutions—give yourself at least 20 minutes of active whiteboard reasoning before checking hints.`;
+    }
+    // 3. Difficulty, Struggling, Stuck, Confused, Low Confidence
+    else if (/\b(hard|difficult|struggl|stuck|confus|don't understand|do not understand|failing|low confidence|frustrat|help with)\b/i.test(text)) {
+      reply = `It's completely normal to find **${focusTopic}** challenging—it is one of the pivotal concepts in ${domain} interviews.
+
+**How CIE Protects You When Struggling:**
+When you log an effort session with a confidence score of **1 or 2 out of 5**, CIE automatically adds reinforcement review buffers to your roadmap and adjusts your velocity without penalizing your readiness horizon.
+
+**De-risking Strategy:**
+1. **Whiteboard First:** Diagram the input-to-output flow on paper before writing code.
+2. **Test Small Edge Cases:** Test with empty inputs, single elements, or boundary values.
+3. **20-Minute Rule:** Give yourself 20 minutes of active whiteboard reasoning before looking at hints. Understand the pattern, don't memorize the solution.`;
+
       suggestions = [
-        'How to master Sliding Window?',
-        'How to tackle Graph BFS vs DFS?',
-        'How important is DP for 2026/2027 placements?'
+        `Explain ${focusTopic} in simple terms`,
+        'What prerequisite should I review?',
+        'Break down the algorithmic pattern'
       ];
-    } else if (text.includes('system design') || text.includes('architecture') || text.includes('scale')) {
-      reply = `For system design at your stage, start with practical building blocks: **Client-Server communication, Caching (Redis), Load Balancing, Database Indexing & Sharding, and Asynchronous Queues (Kafka/RabbitMQ)**.\n\nCheck out today's **Industry Topic** calendar to see real-world architectural deep-dives used by Uber, Netflix, and Discord!`;
+    }
+    // 4. Roadmap, Readiness Horizon, Timeline, Score, Completion
+    else if (/\b(roadmap|readiness|horizon|timeline|when ready|when will i|preparedness|score|completion|remaining units|units left)\b/i.test(text)) {
+      reply = `Here is your authoritative preparation timeline calculated by the Career Intelligence Engine:
+
+• **Remaining Workload:** **${remainingUnits} learning units** left (with **${completedUnits} completed** out of ${totalUnits || (completedUnits + remainingUnits)} total)
+• **Estimated Readiness Horizon:** **${readiness.targetCompletionEstimate || '~6 months'}** (${readiness.estimatedWeeks || 24} weeks)
+• **Current Preparedness Score:** **${readiness.currentPreparednessScore || 15}/100**
+• **Weekly Schedule:** **${weeklyHours} hrs/week** (Velocity: **${velocity}x**)
+• **Pacing Health:** **${pacing.status || 'OnPace'}** (${pacing.dailyTargetUnits || 1.0} units/day)
+
+Your next immediate milestone is completing your active focus on **${focusTopic}**. Each completed unit directly increments your placement readiness score!`;
+
       suggestions = [
-        'Explain Redis caching strategies',
-        'When should I use SQL vs NoSQL?',
-        'What is horizontal vs vertical scaling?'
+        'How can I accelerate my readiness horizon?',
+        `What topic unlocks after ${focusTopic}?`,
+        'What should I prepare today?'
       ];
-    } else if (text.includes('opportunity') || text.includes('internship') || text.includes('job') || text.includes('resume')) {
-      reply = `Your CIE match engine scans our verified opportunities pipeline against your **${domain}** profile. To stand out for Tier-1 product roles:\n1. Highlight 2 deep full-stack or systems projects with live URLs.\n2. Quantify results (e.g., "reduced query latency by 40% using Redis cache").\n3. Match key technical keywords present in the opportunity feed.`;
+    }
+    // 5. Conceptual Explanations & Patterns
+    else if (/\b(explain|what is|how does|concept|understand|break down|pattern|walkthrough|difference between|how to tackle|code example)\b/i.test(text)) {
+      reply = `Let's break down the core architectural and algorithmic patterns behind **${focusTopic}** in the **${domain}** track:
+
+1. **Foundational Mechanism:** Focus on how data flows and how invariants are maintained. In engineering interviews, interviewers look for how you handle state changes and edge conditions.
+2. **Complexity Bounds:** Identify the time complexity target (e.g. $O(N)$ or $O(N \\log N)$) and whether space can be optimized from $O(N)$ to $O(1)$.
+3. **Common Failure Modes:** The most common pitfalls are off-by-one boundary bugs, unhandled null/empty inputs, and redundant re-computations.
+
+Would you like a step-by-step code demonstration or an edge-case checklist for **${focusTopic}**?`;
+
       suggestions = [
-        'Show my top matched internships',
-        'How can I improve my CIE match score?',
-        'What skills should I add to my profile?'
+        `Show me a concrete code example for ${focusTopic}`,
+        'What are common interview edge cases for this?',
+        'What should I practice next?'
       ];
-    } else {
-      reply = `Hello! I'm your BeyondCGPA AI Mentor. I have full context on your **${domain}** goals, your **${weeklyHours} hours/week** availability, and your current focus on **${focusTitle}**.\n\nHow can I help you accelerate your technical preparation or clarify concepts today?`;
+    }
+    // 6. Career, Companies, Resumes, Internships, Placements
+    else if (/\b(opportunity|internship|job|resume|interview|tier 1|faang|product companies|placement|hire|hired)\b/i.test(text)) {
+      reply = `For targeting **${targetCompanies}** in the **${domain}** track:
+
+1. **Deep Implementation Over Toy Tutorials:** Showcase 2 production-grade projects with live URLs, CI/CD, and documented architecture trade-offs.
+2. **Pattern Fluency:** Product companies prioritize pattern intuition (recognizing when to apply two pointers, sliding window, caching, or indexing) over memorized code.
+3. **CIE Match Alignment:** Your opportunities feed dynamically scores roles against your verified roadmap units. Completing **${focusTopic}** will strengthen your match scores for incoming roles.`;
+
       suggestions = [
-        'What should I study next?',
-        'Explain Today\'s Topic in simple terms',
+        'Show my top matched opportunities',
+        'What skills should I add to my profile?',
+        'Review my readiness timeline'
+      ];
+    }
+    // 7. Conversational Follow-up / Direct Assistance (Never repeating generic intro)
+    else {
+      reply = `Understood. Looking at your current **${domain}** preparation track:
+
+• **Active Focus:** **${focusTopic}** (${focusCat})
+• **Remaining Workload:** **${remainingUnits} effort units**
+• **Weekly Schedule:** **${weeklyHours} hrs/week**
+
+Regarding "${userMessage.trim()}":
+To make steady progress without burnout, keep your focus dialed into the immediate topic in front of you. Would you like me to explain the core concepts of **${focusTopic}**, provide an actionable coding task, or adjust your study pacing?`;
+
+      suggestions = [
+        `How should I approach ${focusTopic}?`,
+        'What should I prepare today?',
         'Review my readiness timeline'
       ];
     }

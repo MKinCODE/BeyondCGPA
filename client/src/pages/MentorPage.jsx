@@ -74,12 +74,14 @@ export const MentorPage = () => {
       }
     } catch (err) {
       console.error('Failed to send mentor message:', err.message);
+      const errorDetail = err.response?.data?.message || err.message || 'AI Mentor service unavailable.';
       setMessages(prev => [
         ...prev,
         {
           sender: 'assistant',
-          text: 'I ran into a temporary hiccup processing your request. Please try asking again!',
-          suggestions: ['What should I study next?', 'Explain my active topic']
+          isError: true,
+          text: `⚠️ ${errorDetail}`,
+          suggestions: ['What should I study next?', 'Explain my active topic', 'How is my readiness horizon calculated?']
         }
       ]);
     } finally {
@@ -190,7 +192,9 @@ export const MentorPage = () => {
                     className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold ${
                       isUser
                         ? 'bg-[#0B172A] text-white'
-                        : 'bg-[#E5F7F4] text-[#087F73]'
+                        : msg.isError
+                          ? 'bg-rose-100 text-rose-700'
+                          : 'bg-[#E5F7F4] text-[#087F73]'
                     }`}
                   >
                     {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
@@ -200,7 +204,9 @@ export const MentorPage = () => {
                     className={`max-w-[82%] sm:max-w-[75%] p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                       isUser
                         ? 'bg-[#0B172A] text-white rounded-tr-none'
-                        : 'bg-[#F8FAFC] text-[#0B172A] border border-[#E2E8F0] rounded-tl-none whitespace-pre-line shadow-2xs'
+                        : msg.isError
+                          ? 'bg-rose-50 text-rose-900 border border-rose-200 rounded-tl-none whitespace-pre-line shadow-2xs'
+                          : 'bg-[#F8FAFC] text-[#0B172A] border border-[#E2E8F0] rounded-tl-none whitespace-pre-line shadow-2xs'
                     }`}
                   >
                     {msg.text}
