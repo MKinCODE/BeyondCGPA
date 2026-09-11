@@ -78,9 +78,32 @@ const ingestOpportunity = async (req, res, next) => {
   }
 };
 
+/**
+ * Manual trigger to dispatch notification alerts for an opportunity
+ */
+const notifyOpportunityMatches = async (req, res, next) => {
+  try {
+    const { opportunityId } = req.params;
+    const opportunity = await Opportunity.findById(opportunityId);
+    if (!opportunity) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found' });
+    }
+
+    const result = await opportunityService.notifyMatchingUsersForOpportunity(opportunity);
+    res.status(200).json({
+      success: true,
+      message: `Alerts dispatched: ${result.notifiedCount} students notified, ${result.skippedCount} skipped`,
+      ...result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getOpportunitiesFeed,
   updateOpportunityStatus,
   getTrackedApplications,
-  ingestOpportunity
+  ingestOpportunity,
+  notifyOpportunityMatches
 };

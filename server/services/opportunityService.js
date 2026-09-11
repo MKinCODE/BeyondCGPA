@@ -3,7 +3,9 @@ const Opportunity = require('../models/Opportunity');
 const OpportunityMatch = require('../models/OpportunityMatch');
 const CareerProfile = require('../models/CareerProfile');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const cieService = require('./cieService');
+const emailService = require('./emailService');
 
 class OpportunityService {
   /**
@@ -54,6 +56,13 @@ class OpportunityService {
       { $set: normalized },
       { upsert: true, new: true }
     );
+
+    // Trigger CIE matching and email alerts if not silenced (e.g. during batch seed)
+    if (rawItem.notify !== false) {
+      this.notifyMatchingUsersForOpportunity(opportunity).catch(err => {
+        console.error('Error dispatching opportunity notifications:', err.message);
+      });
+    }
 
     return opportunity;
   }
@@ -138,6 +147,117 @@ class OpportunityService {
 
     await match.save();
     return match;
+  }
+
+  /**
+   * Evaluates students against an opportunity and dispatches targeted email alerts
+   * based on CIE matching and notification preferences, while preventing duplicates.
+   */
+  async notifyMatchingUsersForOpportunity(opportunity) {
+    if (!opportunity || !opportunity.isActive) {
+      return { notifiedCount: 0, skippedCount: 0 };
+    }
+
+    // Find all verified, active students who completed onboarding
+    const eligibleStudents = await User.find({
+      isEmailVerified: true,
+      onboardingCompleted: true
+    });
+
+    let notifiedCount = 0;
+    let skippedCount = 0;
+
+    for (const student of eligibleStudents) {
+      // 1. Check user notification preferences
+      if (student.notificationPreferences?.emailAlerts === false) {
+        skippedCount++;
+        continue;
+      }
+
+      // 2. Duplicate prevention: check if alert was already sent for this opportunity
+      const existingMatch = await OpportunityMatch.findOne({
+        user: student._id,
+        opportunity: opportunity._id
+      });
+
+      if (existingMatch && existingMatch.alertSent) {
+        skippedCount++;
+        continue;
+      }
+
+      // 3. Retrieve student's career profile
+      const profile = await CareerProfile.findOne({ user: student._id });
+      if (!profile) {
+        skippedCount++;
+        continue;
+      }
+
+      // 4. Graduation year eligibility check (if specified)
+      if (
+        opportunity.targetGraduationYears &&
+        opportunity.targetGraduationYears.length > 0 &&
+        student.graduationYear &&
+        !opportunity.targetGraduationYears.includes(student.graduationYear)
+      ) {
+        skippedCount++;
+        continue;
+      }
+
+      // 5. Calculate authoritative CIE match score
+      const { matchScore, matchReasons } = cieService.calculateOpportunityMatch(opportunity, profile, student);
+
+      // 6. Relevance check: must meet threshold (>= 75) and domain alignment
+      const isDomainAligned =
+        opportunity.domain === profile.targetDomain ||
+        opportunity.domain === 'SoftwareEngineering' ||
+        profile.targetDomain === 'Undecided';
+
+      if (matchScore < 75 || !isDomainAligned) {
+        skippedCount++;
+        continue; // Irrelevant or low-match opportunity
+      }
+
+      // 7. Dispatch genuine email alert using Resend API service
+      await emailService.sendOpportunityAlert(
+        student.email,
+        student.name,
+        opportunity,
+        matchScore,
+        matchReasons
+      );
+
+      // 8. Record match with alertSent: true to prevent duplicate alerts
+      await OpportunityMatch.findOneAndUpdate(
+        { user: student._id, opportunity: opportunity._id },
+        {
+          $set: {
+            user: student._id,
+            opportunity: opportunity._id,
+            matchScore,
+            matchReasons,
+            alertSent: true,
+            alertSentAt: new Date()
+          },
+          $setOnInsert: {
+            status: 'Discovered'
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      // 9. Create in-app Notification
+      await Notification.create({
+        user: student._id,
+        title: `🎯 New Opportunity Match: ${opportunity.company} - ${opportunity.title}`,
+        message: `CIE evaluated a ${matchScore}% match for you based on your ${profile.targetDomain} path.`,
+        type: 'OpportunityMatch',
+        link: '/opportunities'
+      });
+
+      notifiedCount++;
+    }
+
+    return { notifiedCount, skippedCount };
   }
 }
 

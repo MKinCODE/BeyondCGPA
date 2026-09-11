@@ -17,7 +17,9 @@ const config = {
   NVIDIA_API_KEY: process.env.NVIDIA_API_KEY || '',
   NVIDIA_API_URL: process.env.NVIDIA_API_URL || 'https://integrate.api.nvidia.com/v1/chat/completions',
   AI_MODEL: process.env.AI_MODEL || 'meta/llama-3.1-70b-instruct',
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173'
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+  EMAIL_FROM: process.env.EMAIL_FROM || 'BeyondCGPA <onboarding@resend.dev>'
 };
 
 const getConfigDiagnostics = () => {
@@ -30,6 +32,7 @@ const getConfigDiagnostics = () => {
     },
     googleOAuth: {
       configured: Boolean(config.GOOGLE_CLIENT_ID),
+      clientId: config.GOOGLE_CLIENT_ID || undefined,
       message: config.GOOGLE_CLIENT_ID
         ? 'Google OAuth client ID configured'
         : 'GOOGLE_CLIENT_ID missing: Direct one-click login enabled for local development.'
@@ -48,6 +51,13 @@ const getConfigDiagnostics = () => {
         : (isProduction
             ? 'CRITICAL: JWT_SECRET is required in production with no fallback'
             : 'Using default development JWT Secret')
+    },
+    emailService: {
+      configured: Boolean(config.RESEND_API_KEY),
+      provider: config.RESEND_API_KEY ? 'Resend API' : 'Console / Dev Dispatch',
+      message: config.RESEND_API_KEY
+        ? 'Resend API key configured for transactional emails'
+        : 'RESEND_API_KEY missing: OTP codes are logged to console (and previewed in dev responses).'
     }
   };
 };

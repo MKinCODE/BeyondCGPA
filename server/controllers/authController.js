@@ -76,11 +76,20 @@ const requestSignupOTP = async (req, res, next) => {
     // Dispatch OTP via Email Service
     const dispatchResult = await emailService.sendVerificationOTP(cleanEmail, name, otpCode);
 
+    if (!dispatchResult.sent) {
+      return res.status(503).json({
+        success: false,
+        message: dispatchResult.error || 'Failed to dispatch verification email. A real email provider is required in production.'
+      });
+    }
+
+    const isProduction = config.NODE_ENV === 'production';
+
     res.status(200).json({
       success: true,
       message: `Verification code sent to ${cleanEmail}. Please enter the 6-digit code to complete registration.`,
       email: cleanEmail,
-      previewOtp: dispatchResult.previewOtp // Returned in dev mode if SMTP not configured
+      previewOtp: isProduction ? undefined : dispatchResult.previewOtp
     });
   } catch (error) {
     next(error);
@@ -264,8 +273,7 @@ const googleAuth = async (req, res, next) => {
     if (!config.GOOGLE_CLIENT_ID) {
       return res.status(503).json({
         success: false,
-        message: 'Google OAuth is not configured on the server. Please set GOOGLE_CLIENT_ID or use Email/Password login.',
-        diagnostics: getConfigDiagnostics()
+        message: 'Google authentication is not configured on the server.'
       });
     }
 
@@ -425,6 +433,18 @@ const getMe = async (req, res, next) => {
  * Return system diagnostic configuration state
  */
 const getConfigStatus = (req, res) => {
+  if (config.NODE_ENV === 'production') {
+    return res.status(200).json({
+      success: true,
+      diagnostics: {
+        googleOAuth: {
+          configured: Boolean(config.GOOGLE_CLIENT_ID),
+          clientId: config.GOOGLE_CLIENT_ID || undefined
+        }
+      }
+    });
+  }
+
   res.status(200).json({
     success: true,
     diagnostics: getConfigDiagnostics()

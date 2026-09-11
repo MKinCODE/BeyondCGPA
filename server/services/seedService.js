@@ -627,7 +627,7 @@ const seedDatabase = async () => {
     if (oppCount === 0) {
       console.log('🌱 Seeding verified Opportunities pipeline...');
       for (const opp of initialOpportunities) {
-        await opportunityService.ingestOpportunity(opp);
+        await opportunityService.ingestOpportunity({ ...opp, notify: false });
       }
       console.log(`✅ Seeded ${initialOpportunities.length} Opportunities.`);
     }

@@ -4,7 +4,8 @@ const {
   getOpportunitiesFeed,
   updateOpportunityStatus,
   getTrackedApplications,
-  ingestOpportunity
+  ingestOpportunity,
+  notifyOpportunityMatches
 } = require('../controllers/opportunityController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -14,5 +15,6 @@ router.get('/feed', getOpportunitiesFeed);
 router.get('/tracked', getTrackedApplications);
 router.put('/:opportunityId/status', updateOpportunityStatus);
 router.post('/ingest', ingestOpportunity);
+router.post('/:opportunityId/notify', notifyOpportunityMatches);
 
 module.exports = router;

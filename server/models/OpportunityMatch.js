@@ -37,6 +37,14 @@ const opportunityMatchSchema = new mongoose.Schema(
     },
     appliedDate: {
       type: Date
+    },
+    alertSent: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    alertSentAt: {
+      type: Date
     }
   },
   {

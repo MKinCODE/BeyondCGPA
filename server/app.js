@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
-const { getConfigDiagnostics } = require('./config/env');
+const { config, getConfigDiagnostics } = require('./config/env');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -15,15 +15,43 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
-// Middlewares
+// CORS configuration supporting both local Vite dev and Vercel production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://beyondcgpa.vercel.app',
+  'http://127.0.0.1:5173'
+];
+
+if (config.CLIENT_URL && !allowedOrigins.includes(config.CLIENT_URL)) {
+  allowedOrigins.push(config.CLIENT_URL);
+}
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow non-browser requests (curl, server-to-server) or listed origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy violation: origin ${origin} is not allowed`));
+    }
+  },
+  credentials: false, // Implementation uses Bearer tokens in Authorization header, not cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health and Diagnostic Endpoints
+// Production Health Check (Root level, used by uptime monitors to keep Render alive)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API-scoped Health and Diagnostic Endpoints
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
@@ -33,6 +61,13 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/diagnostics', (req, res) => {
+  if (config.NODE_ENV === 'production') {
+    return res.status(403).json({
+      success: false,
+      message: 'Diagnostics endpoint is disabled in production.'
+    });
+  }
+
   res.status(200).json({
     success: true,
     diagnostics: getConfigDiagnostics()
