@@ -1,14 +1,195 @@
 const aiService = require('./ai/aiService');
 
 /**
- * Onboarding Questionnaire Engine
+ * Domain-Specific Knowledge Base for Dynamic Question & Option Generation
+ * Defines contextually accurate technologies, concepts, and project milestones per domain.
+ */
+const DOMAIN_KNOWLEDGE = {
+  'Cloud/DevOps': {
+    label: 'Cloud & DevOps Infrastructure',
+    proficiencyTitle: 'What is your current hands-on baseline in Cloud & DevOps tooling?',
+    proficiencySubtitle: 'CIE calibrates starting effort units to avoid basic tutorials if you already know containerization.',
+    proficiencyOptions: [
+      { value: 'Beginner', label: 'Beginner / Starting Fresh', description: 'New to containers, cloud and DevOps; comfortable with basic command line' },
+      { value: 'Intermediate', label: 'Intermediate / Built Deployments', description: 'Built Dockerfiles, deployed web apps on cloud VPS, or configured basic CI/CD' },
+      { value: 'Advanced', label: 'Advanced / Production Experience', description: 'Hands-on with Kubernetes, Terraform IaC, multi-stage pipelines, and monitoring' }
+    ],
+    skillsTitle: 'Which Cloud & DevOps tools and practices have you ALREADY worked with?',
+    skillsSubtitle: 'CIE will tailor your roadmap to skip tools you already know and focus on your skill gaps.',
+    skillsOptions: [
+      { value: 'Docker', label: 'Docker & Containerization' },
+      { value: 'Kubernetes', label: 'Kubernetes Container Orchestration' },
+      { value: 'CI_CD', label: 'CI/CD Pipelines (GitHub Actions / GitLab CI)' },
+      { value: 'Linux_Shell', label: 'Linux Systems & Shell Scripting' },
+      { value: 'Terraform_IaC', label: 'Infrastructure as Code (Terraform)' },
+      { value: 'Cloud_Platforms', label: 'Cloud Platforms (AWS, GCP, or Azure)' },
+      { value: 'Observability', label: 'Prometheus, Grafana & Logging' },
+      { value: 'None', label: 'None of these yet (Starting fresh in DevOps)' }
+    ],
+    projectsTitle: 'What scale of infrastructure or deployments have you managed so far?',
+    projectsSubtitle: 'Differentiates between local lab experimentation and production reliability.',
+    projectsOptions: [
+      { value: 'Local_Experiments', label: 'Local Experiments', description: 'CLI commands, basic scripts, or introductory Docker tutorials locally' },
+      { value: 'Docker_Compose_Apps', label: 'Multi-container Setups', description: 'Configured Docker Compose with multi-container web apps and databases' },
+      { value: 'Cloud_VPS_Deployments', label: 'Cloud Deployments', description: 'Provisioned cloud VMs (EC2/DigitalOcean), configured reverse proxies & SSL' },
+      { value: 'Production_GitOps', label: 'Automated CI/CD / Kubernetes', description: 'Deployed live automated pipelines or managed cluster environments' }
+    ]
+  },
+
+  'Frontend': {
+    label: 'Frontend Engineering',
+    proficiencyTitle: 'What is your current practical baseline in Frontend & Web Architecture?',
+    proficiencySubtitle: 'CIE calibrates starting effort units so you never waste time on basics you already know.',
+    proficiencyOptions: [
+      { value: 'Beginner', label: 'Beginner / Starting Fresh', description: 'Familiar with HTML/CSS/basic JS syntax; new to modern frontend frameworks' },
+      { value: 'Intermediate', label: 'Intermediate / Built Web Apps', description: 'Built functioning responsive apps with React; comfortable with hooks and state' },
+      { value: 'Advanced', label: 'Advanced / Production Experience', description: 'Architected reusable component design systems, performance profiling, and SSR' }
+    ],
+    skillsTitle: 'Which Frontend technologies and concepts have you ALREADY worked with?',
+    skillsSubtitle: 'CIE will tailor your roadmap to skip concepts you already know and focus on your skill gaps.',
+    skillsOptions: [
+      { value: 'React', label: 'Modern React & Component Architecture' },
+      { value: 'State_Management', label: 'State Systems (Context, Zustand, or Redux)' },
+      { value: 'TypeScript_Web', label: 'TypeScript for Frontend Development' },
+      { value: 'CSS_Tailwind', label: 'Tailwind CSS & Responsive Layout Algorithms' },
+      { value: 'Web_Performance', label: 'DOM Performance & Core Web Vitals (LCP/INP)' },
+      { value: 'NextJS_SSR', label: 'Next.js & Server-Side Rendering (SSR/SSG)' },
+      { value: 'None', label: 'None of these yet (Starting fresh in Frontend)' }
+    ],
+    projectsTitle: 'What kind of web applications or interfaces have you built so far?',
+    projectsSubtitle: 'Differentiates between static pages and complex production client applications.',
+    projectsOptions: [
+      { value: 'Static_Pages', label: 'Coursework / Static Pages', description: 'Built static landing pages or basic course assignments' },
+      { value: 'Interactive_SPAs', label: 'Interactive Single-Page Apps', description: 'Built dynamic apps with client-side routing, API fetching, and forms' },
+      { value: 'Full_Frontend_Products', label: 'Complete Web Products', description: 'Built full production frontend products with auth, dashboards, and error handling' },
+      { value: 'High_Perf_Apps', label: 'High-Performance / Scaled Apps', description: 'Optimized complex apps with virtualization, code-splitting, and accessibility' }
+    ]
+  },
+
+  'Backend': {
+    label: 'Backend & Distributed Systems',
+    proficiencyTitle: 'What is your current practical baseline in Backend & Server Systems?',
+    proficiencySubtitle: 'CIE calibrates starting effort units to tailor your API and database curriculum.',
+    proficiencyOptions: [
+      { value: 'Beginner', label: 'Beginner / Starting Fresh', description: 'Familiar with basic programming; new to HTTP, server architecture, or database design' },
+      { value: 'Intermediate', label: 'Intermediate / Built APIs', description: 'Built authenticated REST APIs; comfortable with database schemas and CRUD' },
+      { value: 'Advanced', label: 'Advanced / Production Experience', description: 'Designed high-throughput microservices, caching layers, and database optimization' }
+    ],
+    skillsTitle: 'Which Backend technologies and patterns have you ALREADY worked with?',
+    skillsSubtitle: 'CIE will tailor your roadmap to skip patterns you already know and focus on your skill gaps.',
+    skillsOptions: [
+      { value: 'REST_APIs', label: 'Production REST APIs (Node/Express, Django, etc.)' },
+      { value: 'SQL_Databases', label: 'Relational Databases & SQL (Postgres / MySQL)' },
+      { value: 'NoSQL_Databases', label: 'NoSQL Databases (MongoDB)' },
+      { value: 'Redis_Caching', label: 'In-Memory Caching (Redis / Memcached)' },
+      { value: 'Message_Brokers', label: 'Message Queues (Kafka / RabbitMQ)' },
+      { value: 'Microservices', label: 'Microservices & Distributed Transactions' },
+      { value: 'None', label: 'None of these yet (Starting fresh in Backend)' }
+    ],
+    projectsTitle: 'What scale of server architecture or APIs have you deployed so far?',
+    projectsSubtitle: 'Differentiates between small script APIs and scalable backend architectures.',
+    projectsOptions: [
+      { value: 'Basic_Scripts', label: 'Scripting / Coursework', description: 'Basic console utilities or introductory academic assignments' },
+      { value: 'Monolithic_APIs', label: 'Monolithic CRUD APIs', description: 'Built backend services connected to a relational or document database' },
+      { value: 'Layered_Services', label: 'Production Layered APIs', description: 'Built APIs with JWT auth, validation, rate limiting, and caching' },
+      { value: 'Distributed_Backends', label: 'Distributed / Event-Driven Systems', description: 'Deployed microservices communicating via message queues or gRPC' }
+    ]
+  },
+
+  'AI/ML': {
+    label: 'AI & Machine Learning Engineering',
+    proficiencyTitle: 'What is your current practical baseline in Machine Learning & AI?',
+    proficiencySubtitle: 'CIE calibrates your learning track between statistical basics and deep architectures.',
+    proficiencyOptions: [
+      { value: 'Beginner', label: 'Beginner / Starting Fresh', description: 'Basic Python syntax; learning linear algebra, probability, and core statistics' },
+      { value: 'Intermediate', label: 'Intermediate / Trained Models', description: 'Trained supervised ML models with Scikit-learn; comfortable with data preparation' },
+      { value: 'Advanced', label: 'Advanced / Production Experience', description: 'Built deep learning models in PyTorch, deployed RAG vector systems, or fine-tuned LLMs' }
+    ],
+    skillsTitle: 'Which AI/ML technologies and frameworks have you ALREADY worked with?',
+    skillsSubtitle: 'CIE will tailor your roadmap to skip tools you already know and focus on your skill gaps.',
+    skillsOptions: [
+      { value: 'Python_Data', label: 'Python Data Science Stack (NumPy, Pandas, Matplotlib)' },
+      { value: 'Scikit_Learn', label: 'Classical Machine Learning (Scikit-Learn Pipelines)' },
+      { value: 'PyTorch_ML', label: 'Deep Learning with PyTorch or TensorFlow' },
+      { value: 'Vector_Databases', label: 'Vector Databases & Embeddings (Chroma, Pinecone)' },
+      { value: 'LLM_Frameworks', label: 'LLM Engineering (LangChain, LlamaIndex, RAG)' },
+      { value: 'Model_Deployment', label: 'Model Serving & Inference APIs (FastAPI)' },
+      { value: 'None', label: 'None of these yet (Starting fresh in AI/ML)' }
+    ],
+    projectsTitle: 'What kind of Machine Learning projects have you developed so far?',
+    projectsSubtitle: 'Differentiates between notebook exploration and real-world inference systems.',
+    projectsOptions: [
+      { value: 'Jupyter_Exploration', label: 'Notebook Data Analysis', description: 'Exploratory data analysis, cleaning datasets, and generating graphs' },
+      { value: 'Trained_Classifiers', label: 'End-to-End ML Pipelines', description: 'Trained classification/regression models with cross-validation' },
+      { value: 'Generative_AI_Apps', label: 'Generative AI & RAG Apps', description: 'Built document question-answering systems with vector search' },
+      { value: 'Production_ML_Pipelines', label: 'Production ML Systems', description: 'Trained deep neural networks or deployed scalable model inference APIs' }
+    ]
+  },
+
+  'Fullstack': {
+    label: 'Full Stack Engineering',
+    proficiencyTitle: 'What is your current practical baseline across Full Stack Engineering?',
+    proficiencySubtitle: 'CIE calibrates starting effort units across client, server, and database layers.',
+    proficiencyOptions: [
+      { value: 'Beginner', label: 'Beginner / Starting Fresh', description: 'Familiar with basic programming; new to connecting frontends with databases' },
+      { value: 'Intermediate', label: 'Intermediate / Built Full Apps', description: 'Built complete functioning web apps with React, Express, and a database' },
+      { value: 'Advanced', label: 'Advanced / Production Experience', description: 'Shipped production fullstack apps with auth, state systems, caching, and CI/CD' }
+    ],
+    skillsTitle: 'Which Full Stack engineering layers have you ALREADY worked with?',
+    skillsSubtitle: 'CIE will tailor your roadmap to focus on your weakest layer and accelerate strong ones.',
+    skillsOptions: [
+      { value: 'React', label: 'Modern React & Component Architecture' },
+      { value: 'REST_APIs', label: 'Production REST APIs (Node/Express)' },
+      { value: 'Databases_SQL', label: 'Database Design & Indexing (SQL / MongoDB)' },
+      { value: 'Fullstack_Auth', label: 'Authentication & Session Security (JWT, OAuth)' },
+      { value: 'Docker', label: 'Containerization with Docker' },
+      { value: 'None', label: 'None of these yet (Starting fresh in Full Stack)' }
+    ],
+    projectsTitle: 'What kind of full stack applications have you shipped so far?',
+    projectsSubtitle: 'Differentiates between tutorial projects and production web systems.',
+    projectsOptions: [
+      { value: 'Tutorial_Clones', label: 'Coursework / Tutorial Clones', description: 'Followed tutorials or built simple single-tier web pages' },
+      { value: 'CRUD_Applications', label: 'Functional CRUD Applications', description: 'Built complete web apps with frontend UI, backend API, and database' },
+      { value: 'Deployed_SaaS', label: 'Live Deployed Products', description: 'Shipped web applications with authentication, live databases, and domain hosting' },
+      { value: 'Scaled_Platforms', label: 'Production Scaled Platforms', description: 'Built platforms with automated testing, caching, and background jobs' }
+    ]
+  },
+
+  'Undecided': {
+    label: 'Cross-Domain Exploration',
+    proficiencyTitle: 'What is your current general practical baseline in programming?',
+    proficiencySubtitle: 'CIE will build a balanced discovery track without premature career locking.',
+    proficiencyOptions: [
+      { value: 'Beginner', label: 'Beginner / Starting Fresh', description: 'New to programming or just starting to learn syntax and variables' },
+      { value: 'Intermediate', label: 'Intermediate / Built Exercises', description: 'Comfortable with basic syntax, functions, and small code exercises' },
+      { value: 'Advanced', label: 'Advanced / Multi-language Experience', description: 'Fluent in at least one language; ready to survey different career specializations' }
+    ],
+    skillsTitle: 'Which foundational programming areas have you explored so far?',
+    skillsSubtitle: 'CIE will balance your exploration topics across areas you haven\'t surveyed yet.',
+    skillsOptions: [
+      { value: 'Web_Basics', label: 'Web Basics (HTML, CSS, or JavaScript)' },
+      { value: 'Python_Scripting', label: 'Python Scripting & Data Handling' },
+      { value: 'OOP_Core', label: 'Object-Oriented Programming (Java, C++)' },
+      { value: 'DSA_Basics', label: 'Basic Array & String Problem Solving' },
+      { value: 'Database_Basics', label: 'Basic SQL or Database Queries' },
+      { value: 'None', label: 'None of these yet (Starting completely fresh)' }
+    ],
+    projectsTitle: 'What practical coding projects have you experimented with so far?',
+    projectsSubtitle: 'Helps determine whether you learn better through visual apps or algorithms.',
+    projectsOptions: [
+      { value: 'No_Projects', label: 'No Projects Yet', description: 'Focused on coursework, theory, or just getting started' },
+      { value: 'Command_Line', label: 'CLI / Script Utilities', description: 'Built command-line tools, calculators, or text games' },
+      { value: 'Small_Web_Pages', label: 'Basic Web Pages', description: 'Created simple interactive web pages or course assignments' },
+      { value: 'Independent_Apps', label: 'Independent Projects', description: 'Built working independent projects in any programming language' }
+    ]
+  }
+};
+
+/**
+ * Dynamic Onboarding Engine
  * 
- * Implements a dynamic questionnaire with:
- * - Dynamic graduation years based on current calendar year
- * - High-value adaptive questioning targeting domain, baselines, DSA preferences, and prior skills
- * - "Other / Not listed + free text" on every predefined list
- * - Early stopping when sufficient calibration data is acquired
- * - Strict hard limit of 15 questions
+ * Generates runtime questions and domain-specific options dynamically from the student's accumulated state.
+ * Employs adaptive information-gap evaluation: asks ONLY what is missing and relevant.
  */
 class OnboardingEngine {
   /**
@@ -20,13 +201,35 @@ class OnboardingEngine {
   }
 
   /**
-   * Evaluates current answers and returns the next dynamic question or signals sufficiency
+   * Resolves the canonical domain key from answers (handling free-text if provided)
+   */
+  resolveDomain(previousAnswers = {}) {
+    if (previousAnswers.targetDomain && DOMAIN_KNOWLEDGE[previousAnswers.targetDomain]) {
+      return previousAnswers.targetDomain;
+    }
+
+    const freeText = (previousAnswers.targetDomain_other || previousAnswers.targetDomain || '').toLowerCase();
+    if (freeText) {
+      if (/\b(devops|cloud|docker|kubernetes|k8s|ci\/cd|infrastructure|terraform)\b/i.test(freeText)) return 'Cloud/DevOps';
+      if (/\b(ai|artificial intelligence|machine learning|ml|llm|pytorch|deep learning|data science)\b/i.test(freeText)) return 'AI/ML';
+      if (/\b(frontend|ui\/ux|react|client-side|css|tailwind|vue|angular)\b/i.test(freeText)) return 'Frontend';
+      if (/\b(backend|api|apis|microservice|microservices|server|express|django|spring boot)\b/i.test(freeText)) return 'Backend';
+      if (/\b(fullstack|full stack|mern|mean|web development)\b/i.test(freeText)) return 'Fullstack';
+      if (/\b(undecided|not sure|explore|general)\b/i.test(freeText)) return 'Undecided';
+    }
+
+    return previousAnswers.targetDomain || null;
+  }
+
+  /**
+   * Evaluates current student state and determines what high-value information is still missing.
+   * Generates ONE relevant question + dynamically tailored options.
    */
   getNextQuestion(previousAnswers = {}) {
     const answeredKeys = Object.keys(previousAnswers);
     const answeredCount = answeredKeys.length;
 
-    // Hard limit: strictly stop at 15 questions
+    // Safety hard limit: strictly cap at 15 questions
     if (answeredCount >= 15) {
       return {
         completed: true,
@@ -34,32 +237,36 @@ class OnboardingEngine {
       };
     }
 
+    const resolvedDomain = this.resolveDomain(previousAnswers);
+    const domainData = DOMAIN_KNOWLEDGE[resolvedDomain] || DOMAIN_KNOWLEDGE['Fullstack'];
     const gradYears = this.getDynamicGraduationYears();
 
-    // 1. Primary Career Domain / Target
-    if (!previousAnswers.targetDomain) {
+    // =========================================================================
+    // Dimension 1: Primary Career Direction / Domain
+    // =========================================================================
+    if (!resolvedDomain) {
       return {
         id: 'targetDomain',
         title: 'What is your primary career target or focus?',
         subtitle: 'This anchors your curriculum phases, prerequisite trees, and opportunity matching.',
         type: 'single_select',
         options: [
+          { value: 'Cloud/DevOps', label: 'Cloud & DevOps Infrastructure', description: 'Docker, Kubernetes, CI/CD pipelines, Terraform, and cloud reliability' },
           { value: 'Frontend', label: 'Frontend Engineering', description: 'Modern React, performance optimization, UI architecture & state systems' },
           { value: 'Backend', label: 'Backend & Distributed Systems', description: 'High-concurrency microservices, caching, Kafka, databases & Express' },
+          { value: 'AI/ML', label: 'AI & Machine Learning Engineering', description: 'PyTorch pipelines, LLM agents, vector databases & model deployment' },
           { value: 'Fullstack', label: 'Full Stack Engineering', description: 'End-to-end React + Node/Express APIs, databases & full application lifecycle' },
-          { value: 'AI/ML', label: 'AI & Machine Learning Engineering', description: 'PyTorch/Scikit pipelines, LLM agents, vector databases & model deployment' },
-          { value: 'Cloud/DevOps', label: 'Cloud & DevOps Infrastructure', description: 'Docker, Kubernetes, CI/CD pipelines, and cloud reliability' },
           { value: 'Undecided', label: 'General / Exploration Mode', description: 'Sample Web, Systems, and Problem Solving before committing to a single track' }
         ],
         allowOther: true,
-        otherPlaceholder: 'Describe your custom goal (e.g., Mobile Apps with Flutter, Data Engineering, Cybersecurity)...',
+        otherPlaceholder: 'Describe your custom goal (e.g., Mobile Apps with Flutter, Cybersecurity, Game Dev)...',
         required: true,
         canFinishEarly: false
       };
     }
 
-    // Branch A: If Undecided / Exploration, probe what areas to sample first
-    if (previousAnswers.targetDomain === 'Undecided' && !previousAnswers.explorationInterest) {
+    // Branch A: If Undecided, clarify initial cross-sampling preference
+    if (resolvedDomain === 'Undecided' && !previousAnswers.explorationInterest) {
       return {
         id: 'explorationInterest',
         title: 'What areas sound most intriguing to explore first?',
@@ -68,6 +275,7 @@ class OnboardingEngine {
         options: [
           { value: 'BuildingVisualApps', label: 'Interactive Web & UI Exploration', description: 'Component architecture, responsive UI, and state management' },
           { value: 'SystemAndDataPlumbing', label: 'Server Logic & Data Foundations', description: 'REST APIs, relational databases, and server patterns' },
+          { value: 'CloudAndContainers', label: 'Cloud & Containerization', description: 'Docker, cloud servers, and automated pipelines' },
           { value: 'AIAndDataExploration', label: 'AI & Intelligent Models', description: 'Python data pipelines, vector search, and intelligent agents' },
           { value: 'BroadFoundations', label: 'Balanced Cross-Domain Sampler', description: 'A balanced survey across Web, Server, Algorithms, and Systems' }
         ],
@@ -78,46 +286,61 @@ class OnboardingEngine {
       };
     }
 
-    // 2. Domain Baseline Proficiency
+    // =========================================================================
+    // Dimension 2: Domain-Specific Baseline Proficiency
+    // =========================================================================
     if (!previousAnswers.domainProficiency) {
-      const target = previousAnswers.targetDomain === 'Undecided'
-        ? 'General Programming'
-        : `${previousAnswers.targetDomain}`;
-
       return {
         id: 'domainProficiency',
-        title: `What is your current practical baseline in ${target}?`,
-        subtitle: 'CIE calibrates starting effort units so you never waste time on basics you already know.',
+        title: domainData.proficiencyTitle,
+        subtitle: domainData.proficiencySubtitle,
         type: 'single_select',
-        options: [
-          { value: 'Beginner', label: 'Beginner / Starting Fresh', description: 'Familiar with basic syntax or just starting to learn' },
-          { value: 'Intermediate', label: 'Intermediate / Built Projects', description: 'Have built functioning projects; comfortable with core patterns' },
-          { value: 'Advanced', label: 'Advanced / Production Experience', description: 'Solid project experience, design patterns, and debugging fluency' }
-        ],
+        options: domainData.proficiencyOptions,
         allowOther: true,
-        otherPlaceholder: 'Describe your current practical experience in free text...',
+        otherPlaceholder: `Describe your hands-on background in ${resolvedDomain}...`,
         required: true,
         canFinishEarly: false
       };
     }
 
-    // 3. DSA Priority Strategy
+    // =========================================================================
+    // Dimension 3: Domain-Specific Technical Knowledge & Prior Skills
+    // Dynamically generated options STRICTLY relevant to the chosen domain!
+    // =========================================================================
+    const hasReportedSkills = previousAnswers.domainSkills !== undefined || previousAnswers.priorSkills !== undefined;
+    if (!hasReportedSkills) {
+      return {
+        id: 'domainSkills',
+        title: domainData.skillsTitle,
+        subtitle: domainData.skillsSubtitle,
+        type: 'multi_select',
+        options: domainData.skillsOptions,
+        allowOther: true,
+        otherPlaceholder: `List any other tools, frameworks or libraries in ${resolvedDomain} you already know...`,
+        required: false,
+        canFinishEarly: false
+      };
+    }
+
+    // =========================================================================
+    // Dimension 4: Strategic DSA Alignment
+    // =========================================================================
     if (!previousAnswers.dsaPreference) {
       return {
         id: 'dsaPreference',
-        title: 'How should Data Structures & Algorithms (DSA) be prioritized?',
+        title: 'How should Data Structures & Algorithms (DSA) fit into your preparation?',
         subtitle: 'CIE adapts phase ordering and workload units based on your explicit priority.',
         type: 'single_select',
         options: [
           {
             value: 'Balanced',
             label: 'Balanced Pace',
-            description: 'Standard engineering mix: algorithm foundations alongside practical development'
+            description: 'Standard engineering mix: algorithm problem-solving in parallel with practical engineering'
           },
           {
             value: 'Minimal',
             label: 'Minimal / Practical Focus (Deprioritize DSA)',
-            description: 'Put domain engineering & production projects first; defer DSA to later optional units'
+            description: 'Put domain engineering & production projects first; defer algorithms to later optional units'
           },
           {
             value: 'SkipForNow',
@@ -137,12 +360,16 @@ class OnboardingEngine {
       };
     }
 
-    // 4. Current DSA Comfort / Experience
-    if (!previousAnswers.dsaProficiency && previousAnswers.dsaPreference !== 'SkipForNow') {
+    // =========================================================================
+    // Dimension 5: DSA Problem-Solving Depth
+    // STRICT RULE: If student selected SkipForNow, NEVER ASK THIS QUESTION!
+    // =========================================================================
+    const wantsDSA = previousAnswers.dsaPreference !== 'SkipForNow';
+    if (wantsDSA && !previousAnswers.dsaProficiency) {
       return {
         id: 'dsaProficiency',
-        title: 'What is your current problem-solving and DSA comfort level?',
-        subtitle: 'Allows CIE to calibrate between foundational array patterns and advanced trees/graphs.',
+        title: 'What is your current problem-solving and coding challenge comfort level?',
+        subtitle: 'Allows CIE to skip introductory arrays if you are already comfortable with two pointers.',
         type: 'single_select',
         options: [
           { value: 'Beginner', label: 'Beginner (0–20 problems solved)', description: 'New to algorithmic problem solving or need structured foundations' },
@@ -156,50 +383,27 @@ class OnboardingEngine {
       };
     }
 
-    // 5. Existing Known Skills / Prior Completed Areas
-    if (!previousAnswers.priorSkills) {
+    // =========================================================================
+    // Dimension 6: Domain-Specific Practical Project / Architecture Scale
+    // =========================================================================
+    const hasProjectAnswer = previousAnswers.domainProjects !== undefined || previousAnswers.practicalProjects !== undefined;
+    if (!hasProjectAnswer) {
       return {
-        id: 'priorSkills',
-        title: 'Which technologies or topics have you ALREADY completed or built with?',
-        subtitle: 'CIE will prioritize your skill gaps and streamline verification units.',
-        type: 'multi_select',
-        options: [
-          { value: 'React', label: 'Modern React & Component Architecture' },
-          { value: 'REST_APIs', label: 'Production REST APIs (Node/Express)' },
-          { value: 'Databases_SQL', label: 'Database Indexing & SQL/NoSQL' },
-          { value: 'Arrays_TwoPointers', label: 'Arrays, Two Pointers & Sliding Window' },
-          { value: 'Docker', label: 'Docker Containerization' },
-          { value: 'PyTorch_ML', label: 'Python & Applied Machine Learning' },
-          { value: 'None', label: 'None of these yet (Starting fresh)' }
-        ],
-        allowOther: true,
-        otherPlaceholder: 'List any other tools, frameworks or libraries you already know well...',
-        required: false,
-        canFinishEarly: true
-      };
-    }
-
-    // 6. Practical Project / Production Experience
-    if (!previousAnswers.practicalProjects) {
-      return {
-        id: 'practicalProjects',
-        title: 'What is your current practical project or building experience?',
-        subtitle: 'Allows CIE to distinguish between pure theoretical knowledge and execution experience.',
+        id: 'domainProjects',
+        title: domainData.projectsTitle,
+        subtitle: domainData.projectsSubtitle,
         type: 'single_select',
-        options: [
-          { value: 'StartingFresh', label: 'Starting Fresh', description: 'Focused primarily on coursework and theory; ready to build first real projects' },
-          { value: 'TutorialGuided', label: 'Guided / Coursework Projects', description: 'Built small tutorial projects or standard college course assignments' },
-          { value: 'FullProjects', label: '1–2 Independent Full Applications', description: 'Built and deployed complete functional apps, APIs or pipelines' },
-          { value: 'ProductionExperience', label: 'Production / Internship Experience', description: 'Real-world deployment, team collaboration, or industry internship work' }
-        ],
+        options: domainData.projectsOptions,
         allowOther: true,
-        otherPlaceholder: 'Briefly describe any notable projects or repos you have built...',
+        otherPlaceholder: `Briefly describe notable projects or systems you have deployed in ${resolvedDomain}...`,
         required: false,
         canFinishEarly: true
       };
     }
 
-    // 7. Weekly Time Commitment
+    // =========================================================================
+    // Dimension 7: Weekly Availability Commitment
+    // =========================================================================
     if (!previousAnswers.weeklyHours) {
       return {
         id: 'weeklyHours',
@@ -216,7 +420,9 @@ class OnboardingEngine {
       };
     }
 
-    // 8. Academic Timeline & Graduation Year
+    // =========================================================================
+    // Dimension 8: Academic Timeline & Graduation Year
+    // =========================================================================
     if (!previousAnswers.graduationYear) {
       return {
         id: 'graduationYear',
@@ -229,48 +435,9 @@ class OnboardingEngine {
       };
     }
 
-    // 9. Primary Programming Language
-    if (!previousAnswers.primaryLanguage) {
-      return {
-        id: 'primaryLanguage',
-        title: 'What is your primary programming language of choice?',
-        subtitle: 'Helps match relevant practice problems and opportunity requirements.',
-        type: 'single_select',
-        options: [
-          { value: 'JavaScript/TypeScript', label: 'JavaScript / TypeScript' },
-          { value: 'Python', label: 'Python' },
-          { value: 'Java', label: 'Java' },
-          { value: 'C++', label: 'C++' },
-          { value: 'Go', label: 'Go' }
-        ],
-        allowOther: true,
-        otherPlaceholder: 'Specify other language (e.g. Rust, Kotlin, Swift)...',
-        required: false,
-        canFinishEarly: true
-      };
-    }
-
-    // 10. Target Companies
-    if (!previousAnswers.targetCompaniesCategory) {
-      return {
-        id: 'targetCompaniesCategory',
-        title: 'What types of companies are you targeting?',
-        subtitle: 'Allows CIE to calibrate between deep system interview rounds vs rapid product engineering.',
-        type: 'multi_select',
-        options: [
-          { value: 'Product-based', label: 'Product-based Tech (Mid to Large)' },
-          { value: 'Startups', label: 'High-growth Startups' },
-          { value: 'Tech Giants', label: 'Tier-1 Tech Giants (FAANG/MAMAA)' },
-          { value: 'Remote-first', label: 'Global Remote-First Companies' }
-        ],
-        allowOther: true,
-        otherPlaceholder: 'Specify any specific companies or industries...',
-        required: false,
-        canFinishEarly: true
-      };
-    }
-
-    // All high-value questions satisfied!
+    // =========================================================================
+    // All high-value calibration signals satisfied! Complete early.
+    // =========================================================================
     return {
       completed: true,
       reason: 'Optimal calibration achieved with sufficient profile depth.'
@@ -296,15 +463,12 @@ class OnboardingEngine {
     }
 
     // 3. Resolve Target Domain
-    let targetDomain = rawAnswers.targetDomain || extracted.detectedDomain || 'Fullstack';
-    if (rawAnswers.targetDomain_other) {
-      targetDomain = extracted.detectedDomain || rawAnswers.targetDomain || 'Fullstack';
-    }
+    let targetDomain = this.resolveDomain(rawAnswers) || extracted.detectedDomain || 'Fullstack';
 
     // 4. Resolve DSA Preference
     let dsaPreference = rawAnswers.dsaPreference || extracted.dsaPreference || 'Balanced';
     if (rawAnswers.dsaPreference_other) {
-      dsaPreference = extracted.dsaPreference || 'Balanced';
+      dsaPreference = extracted.dsaPreference || rawAnswers.dsaPreference || 'Balanced';
     }
 
     // 5. Resolve Weekly Hours & Pace
@@ -315,31 +479,54 @@ class OnboardingEngine {
     let domainProf = rawAnswers.domainProficiency || extracted.developmentProficiency || 'Beginner';
     let dsaProf = rawAnswers.dsaProficiency || extracted.dsaComfort || (dsaPreference === 'Intensive' ? 'Intermediate' : 'Beginner');
 
-    const practicalProjects = rawAnswers.practicalProjects || (extracted.hasProductionExperience ? 'ProductionExperience' : null);
-    if (practicalProjects === 'ProductionExperience') {
+    const domainProjects = rawAnswers.domainProjects || rawAnswers.practicalProjects || (extracted.hasProductionExperience ? 'Production_GitOps' : null);
+    if (domainProjects === 'Production_GitOps' || domainProjects === 'High_Perf_Apps' || domainProjects === 'Distributed_Backends' || domainProjects === 'ProductionExperience') {
       if (domainProf === 'Beginner') domainProf = 'Intermediate';
       else domainProf = 'Advanced';
-    } else if (practicalProjects === 'FullProjects' && domainProf === 'Beginner') {
-      domainProf = 'Intermediate';
     }
 
     const estimatedProficiency = {
-      dsa: dsaProf,
+      dsa: dsaPreference === 'SkipForNow' ? 'Beginner' : dsaProf,
       development: domainProf,
-      coreCS: (domainProf === 'Advanced' || dsaProf === 'Advanced' || practicalProjects === 'ProductionExperience') ? 'Intermediate' : 'Beginner',
-      systemDesign: (domainProf === 'Advanced' || practicalProjects === 'ProductionExperience') ? 'Intermediate' : 'Beginner'
+      coreCS: (domainProf === 'Advanced' || dsaProf === 'Advanced') ? 'Intermediate' : 'Beginner',
+      systemDesign: domainProf === 'Advanced' ? 'Intermediate' : 'Beginner'
     };
 
     // 7. Resolve Self-Reported Skills (Separated from verified mastery!)
-    const priorSkills = Array.isArray(rawAnswers.priorSkills) ? rawAnswers.priorSkills : [];
+    const reportedSkills = Array.isArray(rawAnswers.domainSkills)
+      ? rawAnswers.domainSkills
+      : Array.isArray(rawAnswers.priorSkills)
+        ? rawAnswers.priorSkills
+        : [];
+
     const selfReportedSkills = [...(extracted.detectedSkills || [])];
 
-    if (priorSkills.includes('React')) selfReportedSkills.push('Modern React, Component Architecture & State Systems');
-    if (priorSkills.includes('REST_APIs')) selfReportedSkills.push('Production REST API Architecture & Express.js');
-    if (priorSkills.includes('Arrays_TwoPointers')) selfReportedSkills.push('Arrays & Two Pointers');
-    if (priorSkills.includes('Databases_SQL')) selfReportedSkills.push('Database Indexing & Query Optimization (SQL vs NoSQL)');
-    if (priorSkills.includes('Docker')) selfReportedSkills.push('Containerization with Docker & Container Orchestration');
-    if (priorSkills.includes('PyTorch_ML')) selfReportedSkills.push('Applied Machine Learning Pipelines & PyTorch/Scikit-Learn');
+    // Map domain skill keys to topic titles
+    reportedSkills.forEach(skillKey => {
+      // Cloud/DevOps skills
+      if (skillKey === 'Docker') selfReportedSkills.push('Containerization with Docker & Container Orchestration');
+      if (skillKey === 'Kubernetes') selfReportedSkills.push('Containerization with Docker & Container Orchestration');
+      if (skillKey === 'CI_CD') selfReportedSkills.push('CI/CD Automation Pipelines & Cloud Infrastructure');
+      if (skillKey === 'Linux_Shell') selfReportedSkills.push('Concurrency, Threads & Process Synchronization');
+      
+      // Frontend skills
+      if (skillKey === 'React') selfReportedSkills.push('Modern React, Component Architecture & State Systems');
+      if (skillKey === 'State_Management') selfReportedSkills.push('Modern React, Component Architecture & State Systems');
+      if (skillKey === 'Web_Performance') selfReportedSkills.push('Web Performance, DOM Mechanics & Responsive UI Architecture');
+      
+      // Backend skills
+      if (skillKey === 'REST_APIs') selfReportedSkills.push('Production REST API Architecture & Express.js');
+      if (skillKey === 'SQL_Databases' || skillKey === 'Databases_SQL') selfReportedSkills.push('Database Indexing & Query Optimization (SQL vs NoSQL)');
+      if (skillKey === 'Redis_Caching') selfReportedSkills.push('Distributed Caching & High Availability (Redis)');
+      if (skillKey === 'Message_Brokers') selfReportedSkills.push('Microservices & Event-Driven Message Brokers');
+      
+      // AI/ML skills
+      if (skillKey === 'Python_Data' || skillKey === 'PyTorch_ML') selfReportedSkills.push('Applied Machine Learning Pipelines & PyTorch/Scikit-Learn');
+      if (skillKey === 'Vector_Databases' || skillKey === 'LLM_Frameworks') selfReportedSkills.push('LLM Application Engineering, Vector DBs & RAG Architecture');
+      
+      // DSA skills
+      if (skillKey === 'Arrays_TwoPointers') selfReportedSkills.push('Arrays & Two Pointers');
+    });
 
     // 8. Interests & Languages
     const interests = [...(extracted.extractedInterests || [])];
@@ -355,7 +542,7 @@ class OnboardingEngine {
 
     const knownLanguages = rawAnswers.primaryLanguage
       ? [rawAnswers.primaryLanguage]
-      : (targetDomain === 'AI/ML' ? ['Python'] : ['JavaScript', 'Python']);
+      : (targetDomain === 'AI/ML' ? ['Python'] : (targetDomain === 'Cloud/DevOps' ? ['Bash', 'Python', 'Go'] : ['JavaScript', 'Python']));
 
     return {
       targetDomain,
@@ -368,9 +555,9 @@ class OnboardingEngine {
       selfReportedExperience: {
         domainProficiency: domainProf,
         dsaProficiency: dsaProf,
-        practicalProjects: practicalProjects || 'None',
-        practicalProjectsDescription: rawAnswers.practicalProjects_other || '',
-        priorSkills,
+        domainProjects: domainProjects || 'None',
+        domainProjectsDescription: rawAnswers.domainProjects_other || rawAnswers.practicalProjects_other || '',
+        reportedSkills,
         extracted
       },
       interests: Array.from(new Set(interests)),
