@@ -1,0 +1,5 @@
+[DUMMY PLACEHOLDER: Replace this file by saving your screenshot as '03_adaptive_roadmap.png']
+
+Target: Adaptive Preparation Roadmap Page
+URL: http://localhost:5173/dashboard/preparation
+Capture: Sequenced roadmap phases (DSA, Development, System Design), allocated learning units, completed units counter, and effort logging interaction.

@@ -1,0 +1,5 @@
+[DUMMY PLACEHOLDER: Replace this file by saving your screenshot as '04_opportunities_match.png']
+
+Target: Verified Opportunities Pipeline
+URL: http://localhost:5173/dashboard/opportunities
+Capture: Internships and full-time listings with CIE match score badges (e.g. 92% match), verified skills, skill gaps to bridge, and direct apply links.

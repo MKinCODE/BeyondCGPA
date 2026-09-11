@@ -1,0 +1,5 @@
+[DUMMY PLACEHOLDER: Replace this file by saving your screenshot as '02_ai_career_mentor.png']
+
+Target: AI Career Mentor Chat Interface
+URL: http://localhost:5173/dashboard/mentor
+Capture: The conversational stream with workload coaching ("It's too fast for me"), left telemetry panel with live student context, and suggestion buttons.
