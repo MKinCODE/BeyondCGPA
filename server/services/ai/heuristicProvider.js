@@ -44,8 +44,26 @@ class HeuristicProvider {
     let reply = '';
     let suggestions = [];
 
+    // 0. Friendly Greeting ("hello", "hi", "hey")
+    if (/^(hi|hello|hey|greetings|good morning|good afternoon|good evening)\b/i.test(text)) {
+      const studentName = user.name ? user.name.split(' ')[0] : 'there';
+      reply = `Hello ${studentName}! 👋
+
+Here is your current preparation snapshot:
+• **Career Track:** **${domain}** (${weeklyHours} hrs/week)
+• **Today's Focus:** **${focusTopic}** (${focusCat})
+• **Remaining Workload:** **${remainingUnits} learning units** (${readiness.targetCompletionEstimate || '~6 months'} readiness horizon)
+
+What would you like to work on today? We can break down **${focusTopic}**, review practice problems, or adjust your study pacing!`;
+
+      suggestions = [
+        `How should I approach ${focusTopic}?`,
+        'What should I study next?',
+        'Review my readiness timeline'
+      ];
+    }
     // 1. Pacing, Workload, Overwhelm, "Too fast", "Too slow", "Falling behind", Schedule
-    if (/\b(too fast|fast for me|slow down|slow it down|too slow|overwhelm|overwhelmed|falling behind|behind|can't keep up|cannot keep up|burnout|too much|pacing|pace|hours|schedule|daily target|drift|exhausted|reduce pace)\b/i.test(text)) {
+    else if (/\b(too fast|fast for me|slow down|slow it down|too slow|overwhelm|overwhelmed|falling behind|behind|can't keep up|cannot keep up|burnout|too much|pacing|pace|hours|schedule|daily target|drift|exhausted|reduce pace)\b/i.test(text)) {
       reply = `I completely understand—balancing university commitments and rigorous technical preparation can easily feel overwhelming.
 
 Here is how your preparation is currently structured in CIE:

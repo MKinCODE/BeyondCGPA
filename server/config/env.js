@@ -16,7 +16,7 @@ const config = {
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
   NVIDIA_API_KEY: process.env.NVIDIA_API_KEY || '',
   NVIDIA_API_URL: process.env.NVIDIA_API_URL || 'https://integrate.api.nvidia.com/v1/chat/completions',
-  AI_MODEL: process.env.AI_MODEL || 'meta/llama-3.3-70b-instruct',
+  AI_MODEL: process.env.AI_MODEL || 'nvidia/llama-3.1-nemotron-70b-instruct',
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
   EMAIL_FROM: process.env.EMAIL_FROM || 'BeyondCGPA <onboarding@resend.dev>'

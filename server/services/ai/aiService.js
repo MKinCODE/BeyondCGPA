@@ -144,12 +144,13 @@ SUGGESTIONS: ["suggestion 1", "suggestion 2", "suggestion 3"]`;
           suggestions
         };
       } catch (err) {
-        // Transparently propagate external AI provider error without fake fallbacks
         console.error('NVIDIA AI Call Failed:', err.message);
-        const providerError = new Error(`AI Provider Error (${nvidiaProvider.model}): ${err.response?.data?.error?.message || err.message}`);
-        providerError.statusCode = 503;
-        providerError.isProviderError = true;
-        throw providerError;
+        // Fall back gracefully to the deep context-aware CIE engine so the chat never breaks!
+        const heuristicResult = heuristicProvider.generateMentorResponse(studentContext, conversationHistory, userMessage);
+        return {
+          reply: `> ⚠️ **Provider Notice**: External AI API encountered an issue (${err.message}). The AI Mentor has responded using the internal Career Intelligence Engine (CIE):\n\n${heuristicResult.reply}`,
+          suggestions: heuristicResult.suggestions
+        };
       }
     }
 

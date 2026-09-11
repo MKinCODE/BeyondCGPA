@@ -8,14 +8,26 @@ class NvidiaProvider {
     this.model = config.AI_MODEL;
   }
 
+  getApiKey() {
+    return process.env.NVIDIA_API_KEY || this.apiKey || config.NVIDIA_API_KEY || '';
+  }
+
+  getModel() {
+    return process.env.AI_MODEL || this.model || config.AI_MODEL || 'nvidia/llama-3.1-nemotron-70b-instruct';
+  }
+
   isConfigured() {
-    return Boolean(this.apiKey && this.apiKey.trim().length > 0);
+    const key = this.getApiKey();
+    return Boolean(key && key.trim().length > 0);
   }
 
   async generateChatResponse(systemPrompt, messages) {
     if (!this.isConfigured()) {
       throw new Error('NVIDIA_API_KEY is not configured');
     }
+
+    const apiKey = this.getApiKey();
+    const model = this.getModel();
 
     try {
       const formattedMessages = [
@@ -29,7 +41,7 @@ class NvidiaProvider {
       const response = await axios.post(
         this.apiUrl,
         {
-          model: this.model,
+          model: model,
           messages: formattedMessages,
           temperature: 0.6,
           top_p: 0.7,
@@ -37,7 +49,7 @@ class NvidiaProvider {
         },
         {
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
+            'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
           },
           timeout: 20000
