@@ -11,32 +11,29 @@ class CIEService {
     let baseOrder;
 
     if (targetDomain === 'Frontend') {
-      baseOrder = ['Development', 'Projects', 'DBMS', 'OS', 'DSA', 'SystemDesign', 'OOP', 'InterviewPrep'];
+      baseOrder = ['Development', 'Projects', 'OOP', 'DSA', 'OS', 'InterviewPrep'];
     } else if (targetDomain === 'Backend') {
       baseOrder = ['Development', 'DBMS', 'SystemDesign', 'OS', 'Projects', 'DSA', 'OOP', 'InterviewPrep'];
     } else if (targetDomain === 'AI/ML') {
-      baseOrder = ['Development', 'Projects', 'DBMS', 'DSA', 'OS', 'SystemDesign', 'OOP', 'InterviewPrep'];
+      baseOrder = ['Development', 'Projects', 'DBMS', 'DSA', 'OOP', 'InterviewPrep'];
     } else if (targetDomain === 'Cloud/DevOps') {
-      baseOrder = ['Development', 'OS', 'SystemDesign', 'DBMS', 'Projects', 'DSA', 'OOP', 'InterviewPrep'];
+      baseOrder = ['Development', 'OS', 'SystemDesign', 'Projects', 'DBMS', 'DSA', 'OOP', 'InterviewPrep'];
     } else if (targetDomain === 'Undecided') {
       // Exploration Mode: Cross-sampling discovery
-      baseOrder = ['Development', 'DBMS', 'Projects', 'DSA', 'OS', 'SystemDesign', 'OOP', 'InterviewPrep'];
+      baseOrder = ['Development', 'DSA', 'DBMS', 'OS', 'Projects', 'OOP', 'InterviewPrep'];
     } else {
       // Fullstack or other default
-      if (dsaPreference === 'Intensive') {
-        baseOrder = ['DSA', 'Development', 'DBMS', 'SystemDesign', 'OS', 'Projects', 'OOP', 'InterviewPrep'];
-      } else {
-        baseOrder = ['Development', 'DSA', 'DBMS', 'SystemDesign', 'OS', 'Projects', 'OOP', 'InterviewPrep'];
-      }
+      baseOrder = ['Development', 'DBMS', 'SystemDesign', 'Projects', 'DSA', 'OS', 'OOP', 'InterviewPrep'];
     }
 
     // Adapt to explicit DSA preference:
-    // If student requested Minimal or SkipForNow, strictly demote DSA to the very end
-    if (dsaPreference === 'Minimal' || dsaPreference === 'SkipForNow') {
+    if (dsaPreference === 'Intensive') {
+      baseOrder = ['DSA', ...baseOrder.filter(c => c !== 'DSA')];
+    } else if (dsaPreference === 'Minimal') {
       baseOrder = baseOrder.filter(c => c !== 'DSA');
-      if (dsaPreference === 'Minimal') {
-        baseOrder.push('DSA'); // Placed at very end
-      }
+      baseOrder.push('DSA'); // Defer to very end
+    } else if (dsaPreference === 'SkipForNow') {
+      baseOrder = baseOrder.filter(c => c !== 'DSA'); // Omit completely from primary phases
     }
 
     return baseOrder;
@@ -46,12 +43,16 @@ class CIEService {
    * Generates a tailored adaptive roadmap for a student based on baseline profile calibration
    */
   async generateBaselineRoadmap(userId, profile) {
-    const { targetDomain, weeklyHours, currentProficiency, dsaPreference } = profile;
+    const { targetDomain, weeklyHours, currentProficiency, dsaPreference, preferredPace } = profile;
 
     // Fetch topics matching the domain or universal topics
-    const domainQuery = (targetDomain === 'Undecided')
-      ? { $in: ['Fullstack', 'Backend', 'Frontend', 'All'] }
-      : { $in: [targetDomain, 'All'] };
+    let domainQuery;
+    if (targetDomain === 'Undecided') {
+      // Exploration mode: Sample foundational topics across Web, Systems, Algorithms, and ML
+      domainQuery = { $in: ['Frontend', 'Backend', 'AI/ML', 'Fullstack', 'All'] };
+    } else {
+      domainQuery = { $in: [targetDomain, 'All'] };
+    }
 
     const topics = await PreparationTopic.find({
       domainRelevance: domainQuery
@@ -64,11 +65,20 @@ class CIEService {
     // Determine category order dynamically based on domain & DSA preference
     const categories = this.getCategoryPhaseOrder(targetDomain, dsaPreference);
     const phases = [];
-    let totalUnits = 0;
+    let totalAllocatedUnits = 0;
+    let initialCompletedUnits = 0;
     let phaseOrder = 1;
 
+    const masteredSkills = (profile.cieDerived?.masteredSkills || []).map(s => s.toLowerCase());
+
     for (const cat of categories) {
-      const catTopics = topics.filter(t => t.category === cat);
+      let catTopics = topics.filter(t => t.category === cat);
+
+      // In Undecided/Exploration mode, limit each category to 1-2 representative sampler topics
+      if (targetDomain === 'Undecided' && catTopics.length > 2) {
+        catTopics = catTopics.slice(0, 2);
+      }
+
       if (catTopics.length > 0) {
         const phaseTopicItems = [];
 
@@ -86,9 +96,9 @@ class CIEService {
 
           // Adaptive baseline unit allocation
           if (profLevel === 'Advanced') {
-            units = Math.max(1, Math.round(units * 0.7)); // Accelerated pace
+            units = Math.max(1, Math.round(units * 0.6)); // Accelerated pace
           } else if (profLevel === 'Beginner') {
-            units = Math.round(units * 1.2); // Foundational reinforcement buffer
+            units = Math.round(units * 1.3); // Reinforcement buffer
           }
 
           // DSA priority reduction if student asked for Minimal
@@ -96,7 +106,14 @@ class CIEService {
             units = Math.max(1, Math.round(units * 0.6));
           }
 
-          totalUnits += units;
+          // Preferred pace adaptation
+          if (preferredPace === 'Accelerated') {
+            units = Math.max(1, units - 1);
+          } else if (preferredPace === 'DeepFoundation') {
+            units = units + 1;
+          }
+
+          totalAllocatedUnits += units;
 
           // Priority assignment
           let priority = 'Standard';
@@ -116,22 +133,41 @@ class CIEService {
             priority
           });
 
-          // Initialize or reset PreparationProgress
-          await PreparationProgress.findOneAndUpdate(
-            { user: userId, topic: topic._id },
-            {
-              $setOnInsert: {
-                user: userId,
-                topic: topic._id,
-                status: 'NotStarted',
-                totalAllocatedUnits: units,
-                completedUnits: 0,
-                remainingUnits: units,
-                confidenceScore: 3
-              }
-            },
-            { upsert: true, returnDocument: 'after' }
+          // Calibrate baseline effort units using self-reported skills without claiming unearned mastery
+          const hasSelfReportedSkill = (profile.selfReportedSkills || []).some(
+            s => s.toLowerCase() === topic.title.toLowerCase() ||
+                 topic.title.toLowerCase().includes(s.toLowerCase()) ||
+                 (s.toLowerCase().includes('react') && topic.slug.includes('react')) ||
+                 (s.toLowerCase().includes('two pointers') && topic.slug.includes('two-pointers')) ||
+                 (s.toLowerCase().includes('rest') && topic.slug.includes('rest'))
           );
+
+          if (hasSelfReportedSkill) {
+            // Streamline to verification unit (1 unit) instead of multi-unit sequence
+            units = Math.max(1, Math.round(units * 0.6));
+          }
+
+          // Check if there is genuine existing verified progress from prior study sessions
+          const existingProg = await PreparationProgress.findOne({ user: userId, topic: topic._id });
+          if (existingProg && existingProg.status === 'Completed') {
+            initialCompletedUnits += existingProg.completedUnits;
+          } else {
+            await PreparationProgress.findOneAndUpdate(
+              { user: userId, topic: topic._id },
+              {
+                $setOnInsert: {
+                  user: userId,
+                  topic: topic._id,
+                  status: 'NotStarted',
+                  totalAllocatedUnits: units,
+                  completedUnits: 0,
+                  remainingUnits: units,
+                  confidenceScore: 3
+                }
+              },
+              { upsert: true, returnDocument: 'after' }
+            );
+          }
         }
 
         const phaseTitle = (targetDomain === 'Undecided')
@@ -147,6 +183,8 @@ class CIEService {
       }
     }
 
+    const remainingUnits = Math.max(0, totalAllocatedUnits - initialCompletedUnits);
+
     // Save active Roadmap
     const roadmap = await Roadmap.findOneAndUpdate(
       { user: userId },
@@ -155,11 +193,11 @@ class CIEService {
         targetDomain,
         status: 'Active',
         phases,
-        totalAllocatedUnits: totalUnits,
-        completedUnits: 0,
-        remainingUnits: totalUnits,
+        totalAllocatedUnits,
+        completedUnits: initialCompletedUnits,
+        remainingUnits,
         adaptationCount: 0,
-        lastAdaptedReason: `Adaptive calibration: ${targetDomain} (DSA: ${dsaPreference || 'Balanced'})`,
+        lastAdaptedReason: `Personalized calibration: ${targetDomain} (DSA: ${dsaPreference || 'Balanced'})`,
         lastAdaptedAt: new Date()
       },
       { upsert: true, returnDocument: 'after' }
@@ -167,17 +205,17 @@ class CIEService {
 
     // Initial readiness horizon and pacing health
     const readinessHorizon = this.calculateReadinessHorizon({
-      totalUnits,
-      completedUnits: 0,
+      totalUnits: totalAllocatedUnits,
+      completedUnits: initialCompletedUnits,
       weeklyHours: weeklyHours || 14,
       velocityMultiplier: 1.0
     });
 
-    const pacingHealth = this.calculatePacingHealth(weeklyHours || 14, totalUnits, 0);
+    const pacingHealth = this.calculatePacingHealth(weeklyHours || 14, totalAllocatedUnits, initialCompletedUnits);
 
     const primaryFocusCat = phases[0]?.category || 'Development';
     const focusReason = targetDomain === 'Undecided'
-      ? 'Exploring initial domain interest and practical foundations'
+      ? 'Exploring initial cross-domain interest and practical foundations'
       : (dsaPreference === 'Minimal' || dsaPreference === 'SkipForNow')
         ? `Accelerating practical ${primaryFocusCat} engineering skills`
         : `Mastering high-impact ${primaryFocusCat} core competency`;

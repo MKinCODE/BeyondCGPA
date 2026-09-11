@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node test_prod_config.js"
+    "test": "node test_cie_audit.js"
   },
   "keywords": [],
   "author": "",

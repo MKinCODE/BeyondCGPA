@@ -51,6 +51,47 @@ Guidelines:
     // Default to Heuristic Provider
     return heuristicProvider.generateMentorResponse(studentContext, userMessage);
   }
+
+  /**
+   * Selectively parse useful free-text answers into structured student state
+   */
+  async extractStructuredStateFromFreeText(freeTextAnswers = {}) {
+    const textValues = Object.entries(freeTextAnswers)
+      .filter(([k, v]) => typeof v === 'string' && v.trim().length > 0)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('\n');
+
+    if (!textValues || textValues.trim().length === 0) {
+      return {};
+    }
+
+    if (nvidiaProvider.isConfigured()) {
+      try {
+        const systemPrompt = `You are an expert student profile analyzer for BeyondCGPA.
+Extract structured career, skill, and preference data from the student's free-text onboarding responses.
+Return ONLY a valid JSON object matching this schema, with NO extra markdown formatting:
+{
+  "detectedDomain": "Frontend" | "Backend" | "Fullstack" | "AI/ML" | "Cloud/DevOps" | "Undecided" | null,
+  "detectedSkills": string[],
+  "dsaPreference": "Intensive" | "Balanced" | "Minimal" | "SkipForNow" | null,
+  "dsaComfort": "Beginner" | "Intermediate" | "Advanced" | null,
+  "developmentProficiency": "Beginner" | "Intermediate" | "Advanced" | null,
+  "extractedInterests": string[]
+}`;
+
+        const messages = [{ sender: 'user', text: `Student free text responses:\n${textValues}` }];
+        const rawJson = await nvidiaProvider.generateChatResponse(systemPrompt, messages);
+        const cleaned = rawJson.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        return parsed;
+      } catch (err) {
+        console.warn('LLM extractor fallback to heuristic due to:', err.message);
+        return heuristicProvider.extractStructuredState(freeTextAnswers);
+      }
+    }
+
+    return heuristicProvider.extractStructuredState(freeTextAnswers);
+  }
 }
 
 module.exports = new AIService();

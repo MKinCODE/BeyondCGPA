@@ -29,6 +29,39 @@ const careerProfileSchema = new mongoose.Schema(
       enum: ['Balanced', 'Accelerated', 'DeepFoundation'],
       default: 'Balanced'
     },
+    // Self-reported student signals (from onboarding / settings)
+    selfReportedSkills: {
+      type: [String],
+      default: []
+    },
+    selfReportedExperience: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    },
+
+    // Estimated proficiency (calibrated from self-report, baseline answers, and diagnostic signals)
+    estimatedProficiency: {
+      dsa: {
+        type: String,
+        enum: ['Beginner', 'Intermediate', 'Advanced'],
+        default: 'Beginner'
+      },
+      development: {
+        type: String,
+        enum: ['Beginner', 'Intermediate', 'Advanced'],
+        default: 'Beginner'
+      },
+      coreCS: {
+        type: String,
+        enum: ['Beginner', 'Intermediate', 'Advanced'],
+        default: 'Beginner'
+      },
+      systemDesign: {
+        type: String,
+        enum: ['Beginner', 'Intermediate', 'Advanced'],
+        default: 'Beginner'
+      }
+    },
     currentProficiency: {
       dsa: {
         type: String,

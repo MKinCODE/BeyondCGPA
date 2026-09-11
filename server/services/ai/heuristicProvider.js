@@ -56,6 +56,95 @@ class HeuristicProvider {
 
     return { reply, suggestions };
   }
+
+  /**
+   * Deterministic extraction of structured student state from free-text answers
+   */
+  extractStructuredState(freeTextAnswers = {}) {
+    const combinedText = Object.values(freeTextAnswers)
+      .filter(v => typeof v === 'string' && v.trim().length > 0)
+      .join(' ')
+      .toLowerCase();
+
+    if (!combinedText) {
+      return {};
+    }
+
+    const result = {
+      detectedDomain: null,
+      detectedSkills: [],
+      dsaPreference: null,
+      dsaComfort: null,
+      developmentProficiency: null,
+      extractedInterests: []
+    };
+
+    // 1. Domain Detection
+    if (combinedText.includes('frontend') || combinedText.includes('ui/ux') || combinedText.includes('react') || combinedText.includes('client-side') || combinedText.includes('css') || combinedText.includes('tailwind')) {
+      result.detectedDomain = 'Frontend';
+    } else if (combinedText.includes('ai') || combinedText.includes('machine learning') || combinedText.includes('llm') || combinedText.includes('pytorch') || combinedText.includes('deep learning') || combinedText.includes('data science') || combinedText.includes('model')) {
+      result.detectedDomain = 'AI/ML';
+    } else if (combinedText.includes('devops') || combinedText.includes('cloud') || combinedText.includes('docker') || combinedText.includes('kubernetes') || combinedText.includes('ci/cd') || combinedText.includes('infrastructure')) {
+      result.detectedDomain = 'Cloud/DevOps';
+    } else if (combinedText.includes('backend') || combinedText.includes('api') || combinedText.includes('microservice') || combinedText.includes('server') || combinedText.includes('express') || combinedText.includes('django')) {
+      result.detectedDomain = 'Backend';
+    } else if (combinedText.includes('fullstack') || combinedText.includes('full stack') || combinedText.includes('mern') || combinedText.includes('web development')) {
+      result.detectedDomain = 'Fullstack';
+    } else if (combinedText.includes('undecided') || combinedText.includes('not sure') || combinedText.includes('explore') || combinedText.includes('general')) {
+      result.detectedDomain = 'Undecided';
+    }
+
+    // 2. Skill Detection
+    const skillDictionary = [
+      { name: 'React', patterns: ['react', 'next.js', 'nextjs', 'jsx'] },
+      { name: 'JavaScript', patterns: ['javascript', 'js', 'es6'] },
+      { name: 'TypeScript', patterns: ['typescript', 'ts'] },
+      { name: 'Node.js', patterns: ['node', 'nodejs', 'express'] },
+      { name: 'Python', patterns: ['python', 'py'] },
+      { name: 'SQL', patterns: ['sql', 'postgres', 'postgresql', 'mysql'] },
+      { name: 'MongoDB', patterns: ['mongo', 'mongodb', 'nosql'] },
+      { name: 'Docker', patterns: ['docker', 'container', 'compose'] },
+      { name: 'Kubernetes', patterns: ['kubernetes', 'k8s'] },
+      { name: 'PyTorch', patterns: ['pytorch', 'torch'] },
+      { name: 'Two Pointers & Arrays', patterns: ['two pointers', 'sliding window', 'leetcode', 'dsa'] },
+      { name: 'Redis', patterns: ['redis', 'caching'] },
+      { name: 'Kafka', patterns: ['kafka', 'message broker'] },
+      { name: 'Git', patterns: ['git', 'github'] },
+      { name: 'CSS/Tailwind', patterns: ['css', 'tailwind', 'sass'] }
+    ];
+
+    const detected = new Set();
+    for (const skill of skillDictionary) {
+      if (skill.patterns.some(p => combinedText.includes(p))) {
+        detected.add(skill.name);
+      }
+    }
+    result.detectedSkills = Array.from(detected);
+
+    // 3. DSA Preference extraction
+    if (combinedText.includes('skip dsa') || combinedText.includes('no dsa') || combinedText.includes('hate dsa') || combinedText.includes('avoid dsa')) {
+      result.dsaPreference = 'SkipForNow';
+    } else if (combinedText.includes('minimal dsa') || combinedText.includes('deprioritize') || combinedText.includes('practical first') || combinedText.includes('portfolio first') || combinedText.includes('less dsa')) {
+      result.dsaPreference = 'Minimal';
+    } else if (combinedText.includes('intensive') || combinedText.includes('heavy dsa') || combinedText.includes('faang') || combinedText.includes('competitive programming')) {
+      result.dsaPreference = 'Intensive';
+    }
+
+    // 4. Proficiency signals
+    if (combinedText.includes('advanced') || combinedText.includes('production') || combinedText.includes('internship') || combinedText.includes('built several apps') || combinedText.includes('2+ years') || combinedText.includes('300+')) {
+      result.developmentProficiency = 'Advanced';
+    } else if (combinedText.includes('intermediate') || combinedText.includes('comfortable') || combinedText.includes('built projects') || combinedText.includes('built a couple') || combinedText.includes('50+')) {
+      result.developmentProficiency = 'Intermediate';
+    } else if (combinedText.includes('beginner') || combinedText.includes('started') || combinedText.includes('new to') || combinedText.includes('learning')) {
+      result.developmentProficiency = 'Beginner';
+    }
+
+    if (combinedText.includes('solved 100+') || combinedText.includes('solved 200+') || combinedText.includes('trees and graphs') || combinedText.includes('dynamic programming')) {
+      result.dsaComfort = 'Intermediate';
+    }
+
+    return result;
+  }
 }
 
 module.exports = new HeuristicProvider();

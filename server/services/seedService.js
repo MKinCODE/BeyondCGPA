@@ -178,15 +178,94 @@ const initialPreparationTopics = [
     ]
   },
 
-  // Development
+  // Frontend Development
+  {
+    title: 'Modern React, Component Architecture & State Systems',
+    slug: 'modern-react-and-state-architecture',
+    category: 'Development',
+    domainRelevance: ['Frontend', 'Fullstack'],
+    difficulty: 'Beginner',
+    allocatedEffortUnits: 3,
+    order: 5,
+    prerequisites: [],
+    summary: 'Component composition, hook lifecycles (useEffect, useMemo, useCallback), context state management, and unidirectional data flow.',
+    keyConcepts: [
+      {
+        title: 'Component Lifecycle & Hook Invariants',
+        description: 'Predictable state updates, dependency arrays, and avoiding unnecessary re-renders with memoization.'
+      },
+      {
+        title: 'Custom Hooks & State Lifting',
+        description: 'Encapsulating reusable business and network logic into custom hooks.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Build Search Filter with Debounced State',
+        difficulty: 'Medium',
+        platform: 'Frontend Challenge',
+        url: '',
+        description: 'Implement a real-time search component with debounced queries and optimistic UI updates.'
+      },
+      {
+        title: 'Design Infinite Scroll List with Virtualization',
+        difficulty: 'Hard',
+        platform: 'Frontend Challenge',
+        url: '',
+        description: 'Render 10,000 items smoothly without degrading frame rate or DOM node count.'
+      }
+    ],
+    actionableChecklist: [
+      'Master hook dependency arrays to avoid memory leaks',
+      'Implement state lifting between sibling components',
+      'Profile React component renders with React DevTools'
+    ]
+  },
+  {
+    title: 'Web Performance, DOM Mechanics & Responsive UI Architecture',
+    slug: 'web-performance-and-dom-mechanics',
+    category: 'Development',
+    domainRelevance: ['Frontend', 'Fullstack'],
+    difficulty: 'Intermediate',
+    allocatedEffortUnits: 3,
+    order: 6,
+    prerequisites: ['modern-react-and-state-architecture'],
+    summary: 'Critical rendering path, Core Web Vitals (LCP, INP, CLS), modern CSS layout algorithms (Flexbox/Grid), and virtual DOM reconciliation.',
+    keyConcepts: [
+      {
+        title: 'Critical Rendering Path',
+        description: 'HTML parsing, CSSOM construction, render tree calculation, layout reflow, and pixel painting.'
+      },
+      {
+        title: 'Core Web Vitals Optimization',
+        description: 'Eliminating layout shifts, deferring non-critical scripts, and optimizing image assets.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Audit and Eliminate Unused CSS/JS Bundles',
+        difficulty: 'Medium',
+        platform: 'Performance Lab',
+        url: '',
+        description: 'Achieve a 90+ Lighthouse score by tree-shaking and dynamic import code-splitting.'
+      }
+    ],
+    actionableChecklist: [
+      'Measure LCP and INP using performance APIs',
+      'Apply CSS content-visibility for offscreen elements',
+      'Implement responsive breakpoints without layout shifts'
+    ]
+  },
+
+  // Backend Development
   {
     title: 'Production REST API Architecture & Express.js',
     slug: 'production-rest-api-architecture',
     category: 'Development',
-    domainRelevance: ['Fullstack', 'Backend', 'All'],
+    domainRelevance: ['Backend', 'Fullstack'],
     difficulty: 'Intermediate',
     allocatedEffortUnits: 3,
-    order: 5,
+    order: 7,
     prerequisites: [],
     summary: 'Building maintainable Express APIs with Controller-Service patterns, middleware, JWT auth, and centralized error handling.',
     keyConcepts: [
@@ -214,16 +293,190 @@ const initialPreparationTopics = [
       'Validate request bodies with Joi or custom middleware'
     ]
   },
+  {
+    title: 'Microservices & Event-Driven Message Brokers',
+    slug: 'microservices-and-event-brokers',
+    category: 'Development',
+    domainRelevance: ['Backend'],
+    difficulty: 'Advanced',
+    allocatedEffortUnits: 4,
+    order: 8,
+    prerequisites: ['production-rest-api-architecture'],
+    summary: 'Asynchronous event decoupling, pub/sub topologies, Kafka/RabbitMQ consumer groups, idempotency, and saga distributed transactions.',
+    keyConcepts: [
+      {
+        title: 'Pub/Sub Decoupling',
+        description: 'Producers publish events without knowledge of downstream consumers or latency.'
+      },
+      {
+        title: 'Idempotent Consumer Pattern',
+        description: 'Ensuring duplicate messages cause zero side effects using unique request idempotency keys.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Design Async Order Processing Queue',
+        difficulty: 'Hard',
+        platform: 'Backend Challenge',
+        url: '',
+        description: 'Design a resilient payment and order fulfillment service decoupled via message queue.'
+      }
+    ],
+    actionableChecklist: [
+      'Design event schemas with backwards compatibility',
+      'Handle poison pill dead letter queues (DLQ)'
+    ]
+  },
+
+  // AI & Machine Learning Development
+  {
+    title: 'Applied Machine Learning Pipelines & PyTorch/Scikit-Learn',
+    slug: 'applied-ml-pipelines-pytorch',
+    category: 'Development',
+    domainRelevance: ['AI/ML'],
+    difficulty: 'Intermediate',
+    allocatedEffortUnits: 4,
+    order: 9,
+    prerequisites: [],
+    summary: 'Feature engineering, data normalization, model evaluation metrics (Precision/Recall/F1, ROC-AUC), and PyTorch tensor architectures.',
+    keyConcepts: [
+      {
+        title: 'Data Leakage Prevention & K-Fold Cross Validation',
+        description: 'Ensuring test sets remain strictly unseen during feature preprocessing.'
+      },
+      {
+        title: 'Gradient Descent & Backpropagation',
+        description: 'Loss function optimization, learning rate schedules, and vanishing gradients.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Build End-to-End Classification Pipeline',
+        difficulty: 'Medium',
+        platform: 'Kaggle',
+        url: '',
+        description: 'Train a tabular classifier with Scikit-learn Pipeline and hyperparameter grid search.'
+      }
+    ],
+    actionableChecklist: [
+      'Evaluate confusion matrix and ROC curves',
+      'Standardize features using fit_transform vs transform correctly'
+    ]
+  },
+  {
+    title: 'LLM Application Engineering, Vector DBs & RAG Architecture',
+    slug: 'llm-engineering-vector-databases',
+    category: 'Development',
+    domainRelevance: ['AI/ML'],
+    difficulty: 'Advanced',
+    allocatedEffortUnits: 4,
+    order: 10,
+    prerequisites: ['applied-ml-pipelines-pytorch'],
+    summary: 'Retrieval-Augmented Generation (RAG), vector embeddings, semantic search, prompt orchestration, and agent tool execution.',
+    keyConcepts: [
+      {
+        title: 'Vector Embeddings & Cosine Similarity',
+        description: 'Dense vector representations and Approximate Nearest Neighbor (ANN) index lookups.'
+      },
+      {
+        title: 'Context Window Management & Chunking',
+        description: 'Optimizing token limits, recursive text splitters, and semantic retrieval relevance.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Build RAG Document Search Assistant',
+        difficulty: 'Hard',
+        platform: 'AI Project',
+        url: '',
+        description: 'Ingest PDF documents into vector store and generate grounded citations with LLM.'
+      }
+    ],
+    actionableChecklist: [
+      'Implement chunking with overlap',
+      'Prevent prompt injection and validate structured outputs'
+    ]
+  },
+
+  // Cloud & DevOps Development
+  {
+    title: 'Containerization with Docker & Container Orchestration',
+    slug: 'containerization-docker-orchestration',
+    category: 'Development',
+    domainRelevance: ['Cloud/DevOps'],
+    difficulty: 'Intermediate',
+    allocatedEffortUnits: 3,
+    order: 11,
+    prerequisites: [],
+    summary: 'Multi-stage Docker builds, layer caching, container networking, volume persistence, and docker-compose service definition.',
+    keyConcepts: [
+      {
+        title: 'Immutable Image Layers',
+        description: 'Ordering Dockerfile instructions to leverage build cache and minimize final container footprint.'
+      },
+      {
+        title: 'Container Networking & DNS',
+        description: 'Bridge networks, port mapping, and inter-service container resolution.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Containerize Multi-tier Application with Docker Compose',
+        difficulty: 'Medium',
+        platform: 'DevOps Lab',
+        url: '',
+        description: 'Compose frontend, Express API, and Postgres with healthchecks and persistent volumes.'
+      }
+    ],
+    actionableChecklist: [
+      'Build non-root unprivileged container images',
+      'Optimize image size using multi-stage builds'
+    ]
+  },
+  {
+    title: 'CI/CD Automation Pipelines & Cloud Infrastructure',
+    slug: 'cicd-pipelines-cloud-infrastructure',
+    category: 'Development',
+    domainRelevance: ['Cloud/DevOps'],
+    difficulty: 'Advanced',
+    allocatedEffortUnits: 4,
+    order: 12,
+    prerequisites: ['containerization-docker-orchestration'],
+    summary: 'Automated GitHub Actions workflows, linting/test gates, artifact registries, Terraform infrastructure as code, and zero-downtime deployments.',
+    keyConcepts: [
+      {
+        title: 'Continuous Delivery Invariants',
+        description: 'Automated build, test verification, security scanning, and staged rolling deployment.'
+      },
+      {
+        title: 'Infrastructure as Code (IaC)',
+        description: 'Declarative resource provisioning, state locking, and drift detection.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Build Automated CI/CD Pipeline with Deployment Gate',
+        difficulty: 'Hard',
+        platform: 'DevOps Project',
+        url: '',
+        description: 'Set up GitHub Actions to run unit tests, build Docker image, and deploy to staging.'
+      }
+    ],
+    actionableChecklist: [
+      'Implement environment secret management',
+      'Configure rolling deployment with automated rollback on failure'
+    ]
+  },
 
   // DBMS
   {
     title: 'Database Indexing & Query Optimization (SQL vs NoSQL)',
     slug: 'database-indexing-optimization',
     category: 'DBMS',
-    domainRelevance: ['Fullstack', 'Backend', 'All'],
+    domainRelevance: ['Fullstack', 'Backend', 'AI/ML', 'Cloud/DevOps'],
     difficulty: 'Intermediate',
     allocatedEffortUnits: 3,
-    order: 6,
+    order: 13,
     prerequisites: [],
     summary: 'B-Tree indexes, compound indexes, execution plans (EXPLAIN), normalization vs denormalization tradeoffs.',
     keyConcepts: [
@@ -256,10 +509,10 @@ const initialPreparationTopics = [
     title: 'Distributed Caching & High Availability (Redis)',
     slug: 'distributed-caching-redis',
     category: 'SystemDesign',
-    domainRelevance: ['Fullstack', 'Backend', 'Cloud/DevOps', 'All'],
+    domainRelevance: ['Fullstack', 'Backend', 'Cloud/DevOps'],
     difficulty: 'Advanced',
     allocatedEffortUnits: 3,
-    order: 7,
+    order: 14,
     prerequisites: ['production-rest-api-architecture'],
     summary: 'Cache-Aside, Write-Through patterns, Cache Stampede prevention, Redis cluster replication and invalidation strategies.',
     keyConcepts: [
@@ -292,10 +545,10 @@ const initialPreparationTopics = [
     title: 'Concurrency, Threads & Process Synchronization',
     slug: 'concurrency-and-synchronization',
     category: 'OS',
-    domainRelevance: ['Fullstack', 'Backend', 'All'],
+    domainRelevance: ['Fullstack', 'Backend', 'Cloud/DevOps', 'All'],
     difficulty: 'Intermediate',
     allocatedEffortUnits: 2,
-    order: 8,
+    order: 15,
     prerequisites: [],
     summary: 'Processes vs Threads, Mutexes, Semaphores, Deadlock conditions, and Race conditions.',
     keyConcepts: [
@@ -323,15 +576,51 @@ const initialPreparationTopics = [
     ]
   },
 
-  // Projects & Interview Prep
+  // OOP / Clean Architecture
+  {
+    title: 'Object-Oriented Design & Clean Architecture Patterns',
+    slug: 'oop-design-patterns-clean-architecture',
+    category: 'OOP',
+    domainRelevance: ['Fullstack', 'Backend', 'Frontend', 'AI/ML', 'All'],
+    difficulty: 'Intermediate',
+    allocatedEffortUnits: 3,
+    order: 16,
+    prerequisites: [],
+    summary: 'SOLID principles, Factory, Strategy, Observer design patterns, and Dependency Inversion in modern software engineering.',
+    keyConcepts: [
+      {
+        title: 'Dependency Inversion Principle (DIP)',
+        description: 'High-level modules should not depend on low-level modules; both should depend on abstractions.'
+      },
+      {
+        title: 'Strategy & Observer Patterns',
+        description: 'Runtime algorithm selection and decoupled event listeners.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Design Parking Lot System (OOP)',
+        difficulty: 'Medium',
+        platform: 'Design Round',
+        url: '',
+        description: 'Design extensible classes, interfaces, and spot allocation strategy.'
+      }
+    ],
+    actionableChecklist: [
+      'Refactor tightly coupled code to use dependency injection',
+      'Apply Single Responsibility Principle across modules'
+    ]
+  },
+
+  // Projects
   {
     title: 'Production Fullstack Capstone & System Integration',
     slug: 'fullstack-capstone-project',
     category: 'Projects',
-    domainRelevance: ['Fullstack', 'Backend', 'Frontend', 'All'],
+    domainRelevance: ['Fullstack', 'Backend'],
     difficulty: 'Advanced',
     allocatedEffortUnits: 5,
-    order: 9,
+    order: 17,
     prerequisites: ['production-rest-api-architecture'],
     summary: 'Building an end-to-end distributed web application with OAuth, real-time WebSockets, cloud database, and CI/CD deployment.',
     keyConcepts: [
@@ -353,6 +642,36 @@ const initialPreparationTopics = [
       'Set up production environment variables',
       'Implement responsive UI with smooth UX',
       'Add end-to-end authentication and API verification'
+    ]
+  },
+  {
+    title: 'Frontend Production Capstone: High-Performance Web App',
+    slug: 'frontend-production-capstone',
+    category: 'Projects',
+    domainRelevance: ['Frontend'],
+    difficulty: 'Advanced',
+    allocatedEffortUnits: 4,
+    order: 18,
+    prerequisites: ['web-performance-and-dom-mechanics'],
+    summary: 'Building a rich, accessible, highly responsive frontend product with client-side routing, offline caching, and responsive design.',
+    keyConcepts: [
+      {
+        title: 'Accessible & Responsive Architecture',
+        description: 'WCAG compliance, ARIA attributes, keyboard navigation, and zero-shift layout.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Ship High-Performance Interactive Analytics Dashboard',
+        difficulty: 'Hard',
+        platform: 'Portfolio',
+        url: '',
+        description: 'Create a client-side analytics UI with interactive SVG charts and theme toggling.'
+      }
+    ],
+    actionableChecklist: [
+      'Implement keyboard navigation and ARIA landmarks',
+      'Optimize client asset bundles with dynamic imports'
     ]
   }
 ];
@@ -596,19 +915,15 @@ const initialOpportunities = [
 
 const seedDatabase = async () => {
   try {
-    // 1. Seed Preparation Topics
-    const topicCount = await PreparationTopic.countDocuments();
-    if (topicCount === 0) {
-      console.log('🌱 Seeding standard curriculum Preparation Topics...');
-      for (const topic of initialPreparationTopics) {
-        await PreparationTopic.findOneAndUpdate(
-          { slug: topic.slug },
-          { $set: topic },
-          { upsert: true }
-        );
-      }
-      console.log(`✅ Seeded ${initialPreparationTopics.length} Preparation Topics.`);
+    // 1. Seed & Sync Preparation Topics
+    for (const topic of initialPreparationTopics) {
+      await PreparationTopic.findOneAndUpdate(
+        { slug: topic.slug },
+        { $set: topic },
+        { upsert: true }
+      );
     }
+    console.log(`✅ Synced ${initialPreparationTopics.length} Preparation Topics.`);
 
     // 2. Seed Industry Topics for Historical Calendar
     const industryCount = await IndustryTopic.countDocuments();

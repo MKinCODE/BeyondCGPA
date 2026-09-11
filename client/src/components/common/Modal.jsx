@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export const Modal = ({
@@ -30,8 +31,8 @@ export const Modal = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-[#0B172A]/50 backdrop-blur-sm transition-opacity animate-fade-in"
@@ -39,10 +40,10 @@ export const Modal = ({
       />
 
       {/* Modal Container */}
-      <div className={`relative w-full ${maxWidth} bg-white rounded-3xl border border-[#E3E1DA] shadow-2xl z-10 overflow-hidden animate-fade-in my-8`}>
+      <div className={`relative w-full ${maxWidth} bg-white rounded-3xl border border-[#E3E1DA] shadow-2xl z-10 overflow-hidden animate-fade-in my-8 max-h-[90vh] flex flex-col`}>
         {/* Header */}
         {(title || showClose) && (
-          <div className="flex items-start justify-between p-6 sm:p-8 pb-4 border-b border-[#F1EFEA]">
+          <div className="flex items-start justify-between p-6 sm:p-8 pb-4 border-b border-[#F1EFEA] shrink-0">
             <div>
               {title && <h3 className="text-xl sm:text-2xl font-bold text-[#0B172A] tracking-tight">{title}</h3>}
               {subtitle && <p className="text-sm text-[#64748B] mt-1">{subtitle}</p>}
@@ -59,12 +60,14 @@ export const Modal = ({
         )}
 
         {/* Content Body */}
-        <div className="p-6 sm:p-8 max-h-[80vh] overflow-y-auto">
+        <div className="p-6 sm:p-8 overflow-y-auto flex-1">
           {children}
         </div>
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default Modal;

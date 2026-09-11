@@ -4,13 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { useCIE } from '../context/CIEContext';
 import ReadinessCard from '../components/dashboard/ReadinessCard';
 import TodaysFocusCard from '../components/dashboard/TodaysFocusCard';
-import TopicCalendarWidget from '../components/dashboard/TopicCalendarWidget';
-import MatchedOpportunitiesWidget from '../components/dashboard/MatchedOpportunitiesWidget';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
 import ScrollReveal from '../components/common/ScrollReveal';
-import { Bot, ArrowRight, Sparkles, BookOpen } from 'lucide-react';
+import { Bot, ArrowRight, Sparkles } from 'lucide-react';
 
 export const DashboardPage = () => {
   const { user } = useAuth();
@@ -85,16 +83,6 @@ export const DashboardPage = () => {
               Open Mentor Chat
             </Button>
           </Card>
-        </ScrollReveal>
-      </div>
-
-      {/* 3. Industry Awareness Calendar & Opportunities */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ScrollReveal direction="up" delay={200}>
-          <TopicCalendarWidget />
-        </ScrollReveal>
-        <ScrollReveal direction="up" delay={240}>
-          <MatchedOpportunitiesWidget />
         </ScrollReveal>
       </div>
     </div>

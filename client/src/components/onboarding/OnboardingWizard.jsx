@@ -47,6 +47,8 @@ export const OnboardingWizard = () => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [history, setHistory] = useState([]);
   const [currentSelection, setCurrentSelection] = useState(null);
+  const [otherText, setOtherText] = useState('');
+  const [showOtherInput, setShowOtherInput] = useState(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompletedState, setIsCompletedState] = useState(false);
@@ -68,9 +70,17 @@ export const OnboardingWizard = () => {
           } else if (q.type === 'slider') {
             setCurrentSelection(q.default || 14);
           } else if (q.type === 'multi_select') {
-            setCurrentSelection(q.options?.map(o => o.value) || []);
+            setCurrentSelection([]);
           } else {
             setCurrentSelection(null);
+          }
+
+          if (updatedAnswers[`${q.id}_other`]) {
+            setOtherText(updatedAnswers[`${q.id}_other`]);
+            setShowOtherInput(true);
+          } else {
+            setOtherText('');
+            setShowOtherInput(false);
           }
         }
       }
@@ -87,6 +97,9 @@ export const OnboardingWizard = () => {
 
   const handleSelectOption = (val) => {
     setCurrentSelection(val);
+    if (val === 'Other') {
+      setShowOtherInput(true);
+    }
   };
 
   const handleToggleMulti = (val) => {
@@ -103,14 +116,18 @@ export const OnboardingWizard = () => {
 
     const key = currentQuestion.id;
     const val = currentSelection;
-    if (currentQuestion.required && (val === null || val === undefined || (Array.isArray(val) && val.length === 0))) {
-      alert('Please make a selection to continue calibration.');
+    if (currentQuestion.required && (val === null || val === undefined || (Array.isArray(val) && val.length === 0 && !otherText.trim()))) {
+      alert('Please make a selection or specify your details to continue calibration.');
       return;
     }
 
     const newAnswers = { ...answers, [key]: val };
+    if (showOtherInput && otherText.trim()) {
+      newAnswers[`${key}_other`] = otherText.trim();
+    }
+
     setAnswers(newAnswers);
-    setHistory([...history, { question: currentQuestion, selected: val }]);
+    setHistory([...history, { question: currentQuestion, selected: val, otherText }]);
 
     await fetchNextQuestion(newAnswers);
   };
@@ -125,8 +142,10 @@ export const OnboardingWizard = () => {
     // Remove the last answer
     const newAnswers = { ...answers };
     delete newAnswers[currentQuestion?.id || ''];
+    delete newAnswers[`${currentQuestion?.id || ''}_other`];
     if (prevItem) {
       delete newAnswers[prevItem.question.id];
+      delete newAnswers[`${prevItem.question.id}_other`];
     }
     setAnswers(newAnswers);
     setIsCompletedState(false);
@@ -141,6 +160,9 @@ export const OnboardingWizard = () => {
       const finalAnswers = { ...answers };
       if (currentQuestion && currentSelection !== null && currentSelection !== undefined) {
         finalAnswers[currentQuestion.id] = currentSelection;
+      }
+      if (currentQuestion && showOtherInput && otherText.trim()) {
+        finalAnswers[`${currentQuestion.id}_other`] = otherText.trim();
       }
 
       const res = await profileAPI.submitOnboarding({
@@ -169,8 +191,7 @@ export const OnboardingWizard = () => {
 
   const questionNum = currentQuestion?.questionNumber || (history.length + 1);
   const maxLimit = 15;
-  const targetOptimal = 8;
-  const progressPercent = Math.min(100, Math.round((questionNum / targetOptimal) * 100));
+  const progressPercent = Math.min(100, Math.round((questionNum / 10) * 100));
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 bg-white">
@@ -189,8 +210,8 @@ export const OnboardingWizard = () => {
         {/* Dynamic Progress Indicator */}
         <div className="mt-5 max-w-xs mx-auto">
           <div className="flex justify-between text-xs text-[#64748B] font-medium mb-1.5">
-            <span>Question {questionNum} of ~5–8</span>
-            <span className="text-[11px] text-slate-400">Hard limit: {maxLimit}</span>
+            <span>Question {questionNum}</span>
+            <span className="text-[11px] text-slate-400">Max limit: {maxLimit}</span>
           </div>
           <div className="w-full bg-[#E2E8F0] h-2 rounded-full overflow-hidden">
             <div
@@ -224,7 +245,7 @@ export const OnboardingWizard = () => {
             <div className="bg-[#F8FAFC] p-4 rounded-2xl border border-[#E2E8F0] max-w-md mx-auto text-left text-xs space-y-2.5">
               <div className="flex justify-between">
                 <span className="text-[#64748B]">Target Track:</span>
-                <strong className="text-[#0B172A]">{answers.targetDomain || 'Fullstack'}</strong>
+                <strong className="text-[#0B172A]">{answers.targetDomain || answers.targetDomain_other || 'Fullstack'}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#64748B]">DSA Priority Strategy:</span>
@@ -270,32 +291,75 @@ export const OnboardingWizard = () => {
 
             {/* Render Question Options based on type */}
             {currentQuestion.type === 'single_select' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {currentQuestion.options?.map((opt) => {
-                  const Icon = DOMAIN_ICONS[opt.value] || Target;
-                  const isSelected = currentSelection === opt.value;
-                  return (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {currentQuestion.options?.map((opt) => {
+                    const Icon = DOMAIN_ICONS[opt.value] || Target;
+                    const isSelected = currentSelection === opt.value;
+                    return (
+                      <div
+                        key={opt.value}
+                        onClick={() => handleSelectOption(opt.value)}
+                        className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
+                          isSelected
+                            ? 'border-[#12B8A6] bg-[#E5F7F4]/30 shadow-xs'
+                            : 'border-[#E2E8F0] hover:border-[#CBD5E1] bg-white hover:bg-[#F8FAFC]'
+                        }`}
+                      >
+                        <div className={`p-2.5 rounded-xl shrink-0 ${isSelected ? 'bg-[#12B8A6] text-white' : 'bg-[#F1F5F9] text-[#64748B]'}`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-[#0B172A]">{opt.label}</h3>
+                          {opt.description && (
+                            <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">{opt.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Other / Not Listed Card */}
+                  {currentQuestion.allowOther && (
                     <div
-                      key={opt.value}
-                      onClick={() => handleSelectOption(opt.value)}
+                      onClick={() => {
+                        handleSelectOption('Other');
+                        setShowOtherInput(true);
+                      }}
                       className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
-                        isSelected
+                        currentSelection === 'Other' || showOtherInput
                           ? 'border-[#12B8A6] bg-[#E5F7F4]/30 shadow-xs'
                           : 'border-[#E2E8F0] hover:border-[#CBD5E1] bg-white hover:bg-[#F8FAFC]'
                       }`}
                     >
-                      <div className={`p-2.5 rounded-xl shrink-0 ${isSelected ? 'bg-[#12B8A6] text-white' : 'bg-[#F1F5F9] text-[#64748B]'}`}>
-                        <Icon className="w-5 h-5" />
+                      <div className={`p-2.5 rounded-xl shrink-0 ${currentSelection === 'Other' || showOtherInput ? 'bg-[#12B8A6] text-white' : 'bg-[#F1F5F9] text-[#64748B]'}`}>
+                        <Sliders className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-[#0B172A]">{opt.label}</h3>
-                        {opt.description && (
-                          <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">{opt.description}</p>
-                        )}
+                        <h3 className="text-sm font-bold text-[#0B172A]">Other / Not Listed</h3>
+                        <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">
+                          Provide custom specification in free text
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+
+                {/* Free Text Input Container */}
+                {currentQuestion.allowOther && (showOtherInput || currentSelection === 'Other') && (
+                  <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#CBD5E1] animate-fade-in space-y-1.5">
+                    <label className="block text-xs font-bold text-[#0B172A]">
+                      Specify custom response:
+                    </label>
+                    <input
+                      type="text"
+                      value={otherText}
+                      onChange={(e) => setOtherText(e.target.value)}
+                      placeholder={currentQuestion.otherPlaceholder || "Type details..."}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-xs text-[#0B172A] focus:outline-none focus:border-[#12B8A6]"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -348,28 +412,63 @@ export const OnboardingWizard = () => {
             )}
 
             {currentQuestion.type === 'multi_select' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {currentQuestion.options?.map((opt) => {
-                  const isChecked = Array.isArray(currentSelection) && currentSelection.includes(opt.value);
-                  return (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {currentQuestion.options?.map((opt) => {
+                    const isChecked = Array.isArray(currentSelection) && currentSelection.includes(opt.value);
+                    return (
+                      <div
+                        key={opt.value}
+                        onClick={() => handleToggleMulti(opt.value)}
+                        className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                          isChecked
+                            ? 'border-[#12B8A6] bg-[#E5F7F4]/40 text-[#087F73]'
+                            : 'border-[#E2E8F0] bg-white text-[#0B172A] hover:bg-[#F8FAFC]'
+                        }`}
+                      >
+                        <span className="text-xs font-bold">{opt.label}</span>
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                          isChecked ? 'bg-[#12B8A6] border-[#12B8A6] text-white' : 'border-[#CBD5E1]'
+                        }`}>
+                          {isChecked && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {currentQuestion.allowOther && (
                     <div
-                      key={opt.value}
-                      onClick={() => handleToggleMulti(opt.value)}
+                      onClick={() => setShowOtherInput(!showOtherInput)}
                       className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                        isChecked
+                        showOtherInput
                           ? 'border-[#12B8A6] bg-[#E5F7F4]/40 text-[#087F73]'
                           : 'border-[#E2E8F0] bg-white text-[#0B172A] hover:bg-[#F8FAFC]'
                       }`}
                     >
-                      <span className="text-xs font-bold">{opt.label}</span>
+                      <span className="text-xs font-bold">Other / Additional skills</span>
                       <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                        isChecked ? 'bg-[#12B8A6] border-[#12B8A6] text-white' : 'border-[#CBD5E1]'
+                        showOtherInput ? 'bg-[#12B8A6] border-[#12B8A6] text-white' : 'border-[#CBD5E1]'
                       }`}>
-                        {isChecked && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {showOtherInput && <CheckCircle2 className="w-3.5 h-3.5" />}
                       </div>
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+
+                {currentQuestion.allowOther && showOtherInput && (
+                  <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#CBD5E1] animate-fade-in space-y-1.5">
+                    <label className="block text-xs font-bold text-[#0B172A]">
+                      Describe any other tools or skills:
+                    </label>
+                    <input
+                      type="text"
+                      value={otherText}
+                      onChange={(e) => setOtherText(e.target.value)}
+                      placeholder={currentQuestion.otherPlaceholder || "List other tools or skills..."}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-xs text-[#0B172A] focus:outline-none focus:border-[#12B8A6]"
+                    />
+                  </div>
+                )}
               </div>
             )}
 

@@ -14,24 +14,42 @@ class PreparationEngine {
       return null;
     }
 
-    // 1. Check for any topic currently InProgress with remaining effort units
+    const profile = await CareerProfile.findOne({ user: userId });
+    const masteredSkills = (profile?.cieDerived?.masteredSkills || []).map(s => s.toLowerCase());
+
+    // Collect all topic IDs present in the active roadmap
+    const roadmapTopicIds = new Set();
+    roadmap.phases.forEach(p => {
+      (p.topics || []).forEach(t => {
+        if (t.topic) {
+          roadmapTopicIds.add(t.topic._id ? t.topic._id.toString() : t.topic.toString());
+        }
+      });
+    });
+
+    // 1. Check for any topic currently InProgress that belongs to the active roadmap
     const inProgressList = await PreparationProgress.find({
       user: userId,
       status: 'InProgress',
       remainingUnits: { $gt: 0 }
     }).populate('topic').sort({ updatedAt: -1 });
 
-    if (inProgressList && inProgressList.length > 0) {
-      const active = inProgressList[0];
-      if (active && active.topic) {
-        return {
-          topic: active.topic,
-          progress: active,
-          reason: 'Continue active preparation unit',
-          category: active.topic.category,
-          isUnblocked: true
-        };
-      }
+    const active = inProgressList.find(p => p.topic && roadmapTopicIds.has(p.topic._id ? p.topic._id.toString() : p.topic.toString()));
+
+    if (active && active.topic) {
+      const isStruggling = active.confidenceScore <= 2 || (profile?.cieDerived?.growthAreas || []).includes(active.topic.title);
+      const reason = isStruggling
+        ? `Reinforcement Focus: consolidating ${active.topic.title} before advancing`
+        : `Continue active workload unit in ${active.topic.title}`;
+
+      return {
+        topic: active.topic,
+        progress: active,
+        reason,
+        category: active.topic.category,
+        isUnblocked: true,
+        isReinforcement: isStruggling
+      };
     }
 
     // 2. Fetch all completed topics with their slugs to evaluate prerequisites
@@ -42,6 +60,15 @@ class PreparationEngine {
 
     const completedTopicIds = new Set(completedProgress.map(p => p.topic?._id?.toString() || p.topic?.toString()));
     const completedTopicSlugs = new Set(completedProgress.map(p => p.topic?.slug).filter(Boolean));
+
+    // Also consider topics in masteredSkills as fulfilling prerequisites
+    for (const skill of masteredSkills) {
+      if (skill.includes('react')) completedTopicSlugs.add('modern-react-and-state-architecture');
+      if (skill.includes('rest') || skill.includes('api')) completedTopicSlugs.add('production-rest-api-architecture');
+      if (skill.includes('two pointers') || skill.includes('arrays')) completedTopicSlugs.add('arrays-and-two-pointers');
+      if (skill.includes('docker')) completedTopicSlugs.add('containerization-docker-orchestration');
+      if (skill.includes('pytorch') || skill.includes('ml')) completedTopicSlugs.add('applied-ml-pipelines-pytorch');
+    }
 
     // 3. Scan through roadmap phases (ordered according to student domain & priorities)
     for (const phase of roadmap.phases) {
@@ -80,10 +107,26 @@ class PreparationEngine {
             });
           }
 
+          // Construct contextual, personalized reason
+          let contextReason = `Highest unblocked priority in ${phase.title}`;
+          if (roadmap.targetDomain === 'Frontend') {
+            contextReason = `Core Frontend Track: mastering ${fullTopic.title}`;
+          } else if (roadmap.targetDomain === 'Backend') {
+            contextReason = `Core Backend Track: mastering ${fullTopic.title}`;
+          } else if (roadmap.targetDomain === 'AI/ML') {
+            contextReason = `AI & ML Systems Track: mastering ${fullTopic.title}`;
+          } else if (roadmap.targetDomain === 'Cloud/DevOps') {
+            contextReason = `DevOps & Reliability Track: mastering ${fullTopic.title}`;
+          } else if (roadmap.targetDomain === 'Undecided') {
+            contextReason = `Exploration Track: cross-domain sampling in ${fullTopic.title}`;
+          } else if (profile?.dsaPreference === 'Intensive') {
+            contextReason = `Algorithmic Priority: high-yield problem solving pattern (${fullTopic.title})`;
+          }
+
           return {
             topic: fullTopic,
             progress,
-            reason: `Next unblocked priority in ${phase.title}`,
+            reason: contextReason,
             category: fullTopic.category || phase.category,
             isUnblocked: true,
             priority: item.priority || 'High'

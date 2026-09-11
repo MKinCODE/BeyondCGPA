@@ -59,7 +59,7 @@ const submitOnboarding = async (req, res, next) => {
     }
 
     // If dynamic rawAnswers provided, allow engine synthesis to fill any missing structured fields
-    const synthesized = onboardingEngine.synthesizeProfile(rawAnswers || req.body);
+    const synthesized = await onboardingEngine.synthesizeProfile(rawAnswers || req.body);
 
     profile.targetDomain = targetDomain || synthesized.targetDomain || 'Fullstack';
     profile.dsaPreference = dsaPreference || synthesized.dsaPreference || 'Balanced';
@@ -70,6 +70,13 @@ const submitOnboarding = async (req, res, next) => {
     profile.interests = (interests && interests.length > 0) ? interests : synthesized.interests;
     profile.knownLanguages = (knownLanguages && knownLanguages.length > 0) ? knownLanguages : synthesized.knownLanguages;
     profile.rawAnswers = rawAnswers || req.body;
+
+    profile.selfReportedSkills = synthesized.selfReportedSkills || [];
+    profile.selfReportedExperience = synthesized.selfReportedExperience || {};
+    profile.estimatedProficiency = synthesized.estimatedProficiency || synthesized.currentProficiency;
+
+    if (!profile.cieDerived) profile.cieDerived = {};
+    if (!profile.cieDerived.masteredSkills) profile.cieDerived.masteredSkills = [];
 
     await profile.save();
 
