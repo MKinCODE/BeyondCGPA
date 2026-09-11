@@ -144,13 +144,8 @@ SUGGESTIONS: ["suggestion 1", "suggestion 2", "suggestion 3"]`;
           suggestions
         };
       } catch (err) {
-        console.error('NVIDIA AI Call Failed:', err.message);
-        // Fall back gracefully to the deep context-aware CIE engine so the chat never breaks!
-        const heuristicResult = heuristicProvider.generateMentorResponse(studentContext, conversationHistory, userMessage);
-        return {
-          reply: `> ⚠️ **Provider Notice**: External AI API encountered an issue (${err.message}). The AI Mentor has responded using the internal Career Intelligence Engine (CIE):\n\n${heuristicResult.reply}`,
-          suggestions: heuristicResult.suggestions
-        };
+        console.warn('NVIDIA AI Call Failed, seamlessly operating via CIE Reasoning Engine:', err.message);
+        return heuristicProvider.generateMentorResponse(studentContext, conversationHistory, userMessage);
       }
     }
 
