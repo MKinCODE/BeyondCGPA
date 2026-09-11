@@ -156,7 +156,7 @@ export const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
             {/* Left Copy */}
-            <div className="lg:col-span-7 space-y-6 text-left">
+            <div className="lg:col-span-6 space-y-6 text-left">
               <ScrollReveal direction="up" delay={50}>
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#E5F7F4] border border-[#12B8A6]/30 text-[#087F73] text-xs font-bold tracking-wide uppercase shadow-xs">
                   <span className="w-2 h-2 rounded-full bg-[#12B8A6] animate-pulse" />
@@ -226,65 +226,17 @@ export const LandingPage = () => {
               </ScrollReveal>
             </div>
 
-            {/* Right Interactive Preview Widget */}
-            <div className="lg:col-span-5 relative flex justify-center">
-              <ScrollReveal direction="scale" delay={220} className="w-full max-w-md">
-                <div className="relative p-6 bg-white rounded-3xl border border-[#E2E8F0] shadow-xl overflow-hidden">
-                  <div className="flex items-center justify-between pb-4 border-b border-[#F1F5F9]">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-400" />
-                      <div className="w-3 h-3 rounded-full bg-amber-400" />
-                      <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                    </div>
-                    <span className="text-[11px] font-bold text-[#087F73] bg-[#E5F7F4] px-2.5 py-0.5 rounded-full">
-                      CIE Live Telemetry
-                    </span>
-                  </div>
-
-                  <div className="space-y-4 pt-4">
-                    {/* Horizon Metric */}
-                    <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
-                      <div className="flex justify-between text-xs text-[#64748B] mb-1 font-semibold">
-                        <span>Readiness Horizon</span>
-                        <span className="text-[#087F73] font-bold">~5 Weeks (at 16 hrs/wk)</span>
-                      </div>
-                      <div className="w-full bg-[#E2E8F0] h-2 rounded-full overflow-hidden">
-                        <div className="bg-gradient-to-r from-[#12B8A6] to-[#087F73] h-full w-2/3 rounded-full" />
-                      </div>
-                    </div>
-
-                    {/* Today's Focus Card Preview */}
-                    <div className="p-4 rounded-2xl border-2 border-[#12B8A6] bg-[#E5F7F4]/30 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold uppercase bg-[#12B8A6] text-white px-2 py-0.5 rounded-md">
-                          Today's Focus
-                        </span>
-                        <span className="text-xs font-bold text-[#0B172A]">DSA Track</span>
-                      </div>
-                      <h4 className="text-sm font-bold text-[#0B172A]">Arrays & Two Pointers</h4>
-                      <p className="text-xs text-[#64748B]">Workload: 3 Units Planned (Remaining: 2)</p>
-                    </div>
-
-                    {/* Verified Opportunity Pill */}
-                    <div className="p-3.5 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src="https://api.dicebear.com/7.x/identicon/svg?seed=Postman"
-                          alt="Company"
-                          className="w-9 h-9 rounded-xl object-contain bg-[#F8FAFC] border border-[#E2E8F0] p-1"
-                        />
-                        <div>
-                          <div className="text-xs font-bold text-[#0B172A]">Early Career Fullstack SWE</div>
-                          <div className="text-[11px] text-[#64748B]">Postman • Bengaluru</div>
-                        </div>
-                      </div>
-                      <span className="text-xs font-extrabold text-[#087F73] bg-[#E5F7F4] px-2 py-1 rounded-xl">
-                        89% Match
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </ScrollReveal>
+            {/* Right Hero Pathway Illustration */}
+            <div className="lg:col-span-6 relative flex items-center justify-center w-full animate-fade-in">
+              <div className="w-full relative rounded-3xl p-2.5 sm:p-3 bg-gradient-to-b from-[#F8FAFC]/90 to-white/95 border border-[#E2E8F0] shadow-2xl shadow-[#12B8A6]/10 overflow-hidden group transition-all duration-300 hover:shadow-[#12B8A6]/20">
+                <img
+                  src="/landing.png"
+                  alt="BeyondCGPA Career Intelligence Engine Learning Pathway"
+                  className="w-full h-auto object-contain rounded-2xl block"
+                  loading="eager"
+                  decoding="async"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -369,7 +321,7 @@ export const LandingPage = () => {
 
           {/* Feature Navigation Tabs */}
           <ScrollReveal direction="up" delay={60}>
-            <div className="flex items-center justify-center gap-2 overflow-x-auto pb-4 scrollbar-none max-w-4xl mx-auto">
+            <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-4 scrollbar-none max-w-5xl mx-auto px-2">
               {featureTabs.map((tab) => {
                 const Icon = tab.icon;
                 const active = activeFeatureTab === tab.id;
@@ -377,7 +329,7 @@ export const LandingPage = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveFeatureTab(tab.id)}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                       active
                         ? 'bg-[#12B8A6] text-white shadow-md shadow-[#12B8A6]/20 scale-105'
                         : 'bg-[#F8FAFC] text-[#64748B] hover:text-[#0B172A] border border-[#E2E8F0] hover:bg-white'
@@ -396,7 +348,7 @@ export const LandingPage = () => {
             const tab = featureTabs.find((t) => t.id === activeFeatureTab) || featureTabs[0];
             return (
               <ScrollReveal direction="scale" delay={100} className="mt-8">
-                <Card className="bg-white p-8 sm:p-12 border-[#E2E8F0] shadow-xl rounded-3xl max-w-5xl mx-auto">
+                <Card className="bg-white p-6 sm:p-8 lg:p-10 border-[#E2E8F0] shadow-xl rounded-3xl max-w-5xl mx-auto w-full overflow-hidden">
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                     <div className="lg:col-span-7 space-y-4 text-left">
                       <Badge variant="teal">{tab.previewBadge}</Badge>

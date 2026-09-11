@@ -12,16 +12,27 @@ export const ScrollReveal = ({
   const domRef = useRef();
 
   useEffect(() => {
+    // Immediate fallback: ensure visibility after a short timeout so content is never stuck hidden
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 400);
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsVisible(true);
+      return () => clearTimeout(timer);
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
+          clearTimeout(timer);
           observer.unobserve(entry.target);
         }
       },
       {
-        threshold,
-        rootMargin: '0px 0px -50px 0px'
+        threshold: 0.01,
+        rootMargin: '100px 0px 50px 0px'
       }
     );
 
@@ -31,9 +42,10 @@ export const ScrollReveal = ({
     }
 
     return () => {
+      clearTimeout(timer);
       if (current) observer.unobserve(current);
     };
-  }, [threshold]);
+  }, []);
 
   const getInitialTransform = () => {
     if (isVisible) return 'translate3d(0, 0, 0) scale(1)';
