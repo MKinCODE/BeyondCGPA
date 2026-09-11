@@ -59,6 +59,15 @@ const careerProfileSchema = new mongoose.Schema(
       type: [String],
       default: ['JavaScript', 'C++', 'Python']
     },
+    dsaPreference: {
+      type: String,
+      enum: ['Intensive', 'Balanced', 'Minimal', 'SkipForNow'],
+      default: 'Balanced'
+    },
+    explorationInterests: {
+      type: [String],
+      default: []
+    },
 
     // Raw user inputs preserved without modification
     rawAnswers: {
@@ -80,6 +89,14 @@ const careerProfileSchema = new mongoose.Schema(
       },
       strengths: [String],
       growthAreas: [String],
+      masteredSkills: [String],
+      currentSkillGaps: [String],
+      velocityMultiplier: { type: Number, default: 1.0 },
+      pacingHealth: {
+        dailyTargetUnits: { type: Number, default: 1.0 },
+        driftUnits: { type: Number, default: 0 },
+        status: { type: String, default: 'OnPace' }
+      },
       lastEvaluatedAt: { type: Date, default: Date.now }
     }
   },

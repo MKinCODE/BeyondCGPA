@@ -1,7 +1,27 @@
 const User = require('../models/User');
 const CareerProfile = require('../models/CareerProfile');
 const cieService = require('../services/cieService');
+const onboardingEngine = require('../services/onboardingEngine');
 const Notification = require('../models/Notification');
+
+/**
+ * Get next dynamic onboarding question based on previous responses
+ */
+const getNextOnboardingQuestion = async (req, res, next) => {
+  try {
+    const answers = req.body.answers || {};
+    const question = onboardingEngine.getNextQuestion(answers);
+    const gradYears = onboardingEngine.getDynamicGraduationYears();
+
+    res.status(200).json({
+      success: true,
+      question,
+      graduationYears: gradYears
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
  * Submit dynamic onboarding questionnaire
@@ -11,6 +31,7 @@ const submitOnboarding = async (req, res, next) => {
     const userId = req.user._id;
     const {
       targetDomain,
+      dsaPreference,
       targetCompaniesCategory,
       weeklyHours,
       preferredPace,
@@ -31,20 +52,24 @@ const submitOnboarding = async (req, res, next) => {
     user.onboardingCompleted = true;
     await user.save();
 
-    // 2. Update CareerProfile preserving raw answers distinctly from structured data
+    // 2. Synthesize or update CareerProfile
     let profile = await CareerProfile.findOne({ user: userId });
     if (!profile) {
       profile = new CareerProfile({ user: userId });
     }
 
-    profile.targetDomain = targetDomain || profile.targetDomain || 'Fullstack';
-    if (targetCompaniesCategory) profile.targetCompaniesCategory = targetCompaniesCategory;
-    if (weeklyHours) profile.weeklyHours = Number(weeklyHours);
-    if (preferredPace) profile.preferredPace = preferredPace;
-    if (currentProficiency) profile.currentProficiency = currentProficiency;
-    if (interests) profile.interests = interests;
-    if (knownLanguages) profile.knownLanguages = knownLanguages;
-    if (rawAnswers) profile.rawAnswers = rawAnswers;
+    // If dynamic rawAnswers provided, allow engine synthesis to fill any missing structured fields
+    const synthesized = onboardingEngine.synthesizeProfile(rawAnswers || req.body);
+
+    profile.targetDomain = targetDomain || synthesized.targetDomain || 'Fullstack';
+    profile.dsaPreference = dsaPreference || synthesized.dsaPreference || 'Balanced';
+    profile.weeklyHours = Number(weeklyHours || synthesized.weeklyHours || 14);
+    profile.preferredPace = preferredPace || synthesized.preferredPace || 'Balanced';
+    profile.currentProficiency = currentProficiency || synthesized.currentProficiency;
+    profile.targetCompaniesCategory = targetCompaniesCategory || synthesized.targetCompaniesCategory;
+    profile.interests = (interests && interests.length > 0) ? interests : synthesized.interests;
+    profile.knownLanguages = (knownLanguages && knownLanguages.length > 0) ? knownLanguages : synthesized.knownLanguages;
+    profile.rawAnswers = rawAnswers || req.body;
 
     await profile.save();
 
@@ -98,54 +123,39 @@ const getProfile = async (req, res, next) => {
 };
 
 /**
- * Update career preferences (e.g. changing weekly hours or target domain)
+ * Update career preferences (e.g. changing weekly hours, target domain, or DSA preference)
  */
 const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { weeklyHours, targetDomain, targetCompaniesCategory, knownLanguages, interests } = req.body;
+    const { weeklyHours, targetDomain, dsaPreference, targetCompaniesCategory, knownLanguages, interests } = req.body;
 
     const profile = await CareerProfile.findOne({ user: userId });
     if (!profile) {
       return res.status(404).json({ success: false, message: 'Career profile not found' });
     }
 
-    let hoursChanged = false;
-    let domainChanged = false;
-
-    if (weeklyHours && Number(weeklyHours) !== profile.weeklyHours) {
-      profile.weeklyHours = Number(weeklyHours);
-      hoursChanged = true;
-    }
-
-    if (targetDomain && targetDomain !== profile.targetDomain) {
-      profile.targetDomain = targetDomain;
-      domainChanged = true;
-    }
-
     if (targetCompaniesCategory) profile.targetCompaniesCategory = targetCompaniesCategory;
     if (knownLanguages) profile.knownLanguages = knownLanguages;
     if (interests) profile.interests = interests;
+    if (dsaPreference) profile.dsaPreference = dsaPreference;
 
     await profile.save();
 
-    let roadmap;
-    if (domainChanged) {
-      // Re-generate roadmap for new domain
-      roadmap = await cieService.generateBaselineRoadmap(userId, profile);
-    } else if (hoursChanged) {
-      // Adapt readiness horizon for adjusted time
-      const result = await cieService.adaptRoadmapToTimeChange(userId, profile.weeklyHours);
-      roadmap = result.roadmap;
-    }
+    // Trigger CIE profile change adaptation (dynamically restructures roadmap or adjusts velocity)
+    const adaptationResult = await cieService.adaptRoadmapToProfileChange(userId, {
+      targetDomain,
+      weeklyHours,
+      dsaPreference
+    });
 
     const updatedProfile = await CareerProfile.findOne({ user: userId });
 
     res.status(200).json({
       success: true,
-      message: 'Profile updated and CIE adaptations synced.',
+      message: 'Career profile and CIE calibration updated successfully.',
       profile: updatedProfile,
-      roadmap
+      roadmap: adaptationResult?.roadmap
     });
   } catch (error) {
     next(error);
@@ -153,6 +163,7 @@ const updateProfile = async (req, res, next) => {
 };
 
 module.exports = {
+  getNextOnboardingQuestion,
   submitOnboarding,
   getProfile,
   updateProfile

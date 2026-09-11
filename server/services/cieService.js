@@ -5,53 +5,118 @@ const CareerProfile = require('../models/CareerProfile');
 
 class CIEService {
   /**
+   * Determine category phase ordering deterministically based on domain and DSA preference
+   */
+  getCategoryPhaseOrder(targetDomain = 'Fullstack', dsaPreference = 'Balanced') {
+    let baseOrder;
+
+    if (targetDomain === 'Frontend') {
+      baseOrder = ['Development', 'Projects', 'DBMS', 'OS', 'DSA', 'SystemDesign', 'OOP', 'InterviewPrep'];
+    } else if (targetDomain === 'Backend') {
+      baseOrder = ['Development', 'DBMS', 'SystemDesign', 'OS', 'Projects', 'DSA', 'OOP', 'InterviewPrep'];
+    } else if (targetDomain === 'AI/ML') {
+      baseOrder = ['Development', 'Projects', 'DBMS', 'DSA', 'OS', 'SystemDesign', 'OOP', 'InterviewPrep'];
+    } else if (targetDomain === 'Cloud/DevOps') {
+      baseOrder = ['Development', 'OS', 'SystemDesign', 'DBMS', 'Projects', 'DSA', 'OOP', 'InterviewPrep'];
+    } else if (targetDomain === 'Undecided') {
+      // Exploration Mode: Cross-sampling discovery
+      baseOrder = ['Development', 'DBMS', 'Projects', 'DSA', 'OS', 'SystemDesign', 'OOP', 'InterviewPrep'];
+    } else {
+      // Fullstack or other default
+      if (dsaPreference === 'Intensive') {
+        baseOrder = ['DSA', 'Development', 'DBMS', 'SystemDesign', 'OS', 'Projects', 'OOP', 'InterviewPrep'];
+      } else {
+        baseOrder = ['Development', 'DSA', 'DBMS', 'SystemDesign', 'OS', 'Projects', 'OOP', 'InterviewPrep'];
+      }
+    }
+
+    // Adapt to explicit DSA preference:
+    // If student requested Minimal or SkipForNow, strictly demote DSA to the very end
+    if (dsaPreference === 'Minimal' || dsaPreference === 'SkipForNow') {
+      baseOrder = baseOrder.filter(c => c !== 'DSA');
+      if (dsaPreference === 'Minimal') {
+        baseOrder.push('DSA'); // Placed at very end
+      }
+    }
+
+    return baseOrder;
+  }
+
+  /**
    * Generates a tailored adaptive roadmap for a student based on baseline profile calibration
    */
   async generateBaselineRoadmap(userId, profile) {
-    const { targetDomain, weeklyHours, currentProficiency } = profile;
+    const { targetDomain, weeklyHours, currentProficiency, dsaPreference } = profile;
 
     // Fetch topics matching the domain or universal topics
+    const domainQuery = (targetDomain === 'Undecided')
+      ? { $in: ['Fullstack', 'Backend', 'Frontend', 'All'] }
+      : { $in: [targetDomain, 'All'] };
+
     const topics = await PreparationTopic.find({
-      domainRelevance: { $in: [targetDomain, 'All'] }
+      domainRelevance: domainQuery
     }).sort({ order: 1 });
 
     if (!topics || topics.length === 0) {
       throw new Error('No curriculum topics found to build roadmap. Ensure database is seeded.');
     }
 
-    // Group topics into logical categories / phases
-    const categories = ['DSA', 'Development', 'OOP', 'DBMS', 'OS', 'SystemDesign', 'Projects', 'InterviewPrep'];
+    // Determine category order dynamically based on domain & DSA preference
+    const categories = this.getCategoryPhaseOrder(targetDomain, dsaPreference);
     const phases = [];
     let totalUnits = 0;
-
     let phaseOrder = 1;
+
     for (const cat of categories) {
       const catTopics = topics.filter(t => t.category === cat);
       if (catTopics.length > 0) {
         const phaseTopicItems = [];
 
         for (const topic of catTopics) {
-          // Adjust allocated units dynamically based on student self-assessed proficiency
-          let units = topic.allocatedEffortUnits;
-          const proficiencyKey = cat === 'DSA' ? 'dsa' : (cat === 'Development' || cat === 'Projects') ? 'development' : (cat === 'SystemDesign') ? 'systemDesign' : 'coreCS';
+          let units = topic.allocatedEffortUnits || 3;
+          const proficiencyKey = cat === 'DSA'
+            ? 'dsa'
+            : (cat === 'Development' || cat === 'Projects')
+              ? 'development'
+              : (cat === 'SystemDesign')
+                ? 'systemDesign'
+                : 'coreCS';
+
           const profLevel = currentProficiency?.[proficiencyKey] || 'Beginner';
 
+          // Adaptive baseline unit allocation
           if (profLevel === 'Advanced') {
-            units = Math.max(1, Math.round(units * 0.6)); // Faster pace for advanced
+            units = Math.max(1, Math.round(units * 0.7)); // Accelerated pace
           } else if (profLevel === 'Beginner') {
-            units = Math.round(units * 1.2); // More foundational time
+            units = Math.round(units * 1.2); // Foundational reinforcement buffer
+          }
+
+          // DSA priority reduction if student asked for Minimal
+          if (cat === 'DSA' && dsaPreference === 'Minimal') {
+            units = Math.max(1, Math.round(units * 0.6));
           }
 
           totalUnits += units;
+
+          // Priority assignment
+          let priority = 'Standard';
+          if (phaseOrder === 1) {
+            priority = 'Critical';
+          } else if (phaseOrder === 2) {
+            priority = 'High';
+          } else if (cat === 'DSA' && (dsaPreference === 'Minimal' || dsaPreference === 'SkipForNow')) {
+            priority = 'Optional';
+          }
+
           phaseTopicItems.push({
             topic: topic._id,
             title: topic.title,
             slug: topic.slug,
             allocatedEffortUnits: units,
-            priority: (cat === 'DSA' || cat === 'Development') ? 'Critical' : 'High'
+            priority
           });
 
-          // Ensure PreparationProgress record exists for each topic
+          // Initialize or reset PreparationProgress
           await PreparationProgress.findOneAndUpdate(
             { user: userId, topic: topic._id },
             {
@@ -69,8 +134,12 @@ class CIEService {
           );
         }
 
+        const phaseTitle = (targetDomain === 'Undecided')
+          ? `Exploration: ${cat} Track`
+          : `${cat} Mastery Phase`;
+
         phases.push({
-          title: `${cat} Mastery Phase`,
+          title: phaseTitle,
           category: cat,
           order: phaseOrder++,
           topics: phaseTopicItems
@@ -78,7 +147,7 @@ class CIEService {
       }
     }
 
-    // Create or update active Roadmap
+    // Save active Roadmap
     const roadmap = await Roadmap.findOneAndUpdate(
       { user: userId },
       {
@@ -90,28 +159,39 @@ class CIEService {
         completedUnits: 0,
         remainingUnits: totalUnits,
         adaptationCount: 0,
-        lastAdaptedReason: 'Baseline profile calibration completed',
+        lastAdaptedReason: `Adaptive calibration: ${targetDomain} (DSA: ${dsaPreference || 'Balanced'})`,
         lastAdaptedAt: new Date()
       },
       { upsert: true, returnDocument: 'after' }
     );
 
-    // Compute initial readiness horizon
+    // Initial readiness horizon and pacing health
     const readinessHorizon = this.calculateReadinessHorizon({
       totalUnits,
       completedUnits: 0,
-      weeklyHours: weeklyHours || 14
+      weeklyHours: weeklyHours || 14,
+      velocityMultiplier: 1.0
     });
 
-    // Update CareerProfile cieDerived
+    const pacingHealth = this.calculatePacingHealth(weeklyHours || 14, totalUnits, 0);
+
+    const primaryFocusCat = phases[0]?.category || 'Development';
+    const focusReason = targetDomain === 'Undecided'
+      ? 'Exploring initial domain interest and practical foundations'
+      : (dsaPreference === 'Minimal' || dsaPreference === 'SkipForNow')
+        ? `Accelerating practical ${primaryFocusCat} engineering skills`
+        : `Mastering high-impact ${primaryFocusCat} core competency`;
+
     await CareerProfile.findOneAndUpdate(
       { user: userId },
       {
         'cieDerived.readinessHorizon': readinessHorizon,
         'cieDerived.focusRecommendation': {
-          primaryCategory: 'DSA',
-          reason: 'Mastering foundational algorithmic patterns'
+          primaryCategory: primaryFocusCat,
+          reason: focusReason
         },
+        'cieDerived.pacingHealth': pacingHealth,
+        'cieDerived.velocityMultiplier': 1.0,
         'cieDerived.lastEvaluatedAt': new Date()
       }
     );
@@ -120,16 +200,15 @@ class CIEService {
   }
 
   /**
-   * Calculates realistic readiness horizon based on total remaining workload and weekly availability.
-   * Workload-based, never promises fixed placement dates.
+   * Calculates realistic readiness horizon based on total remaining workload, weekly availability, and velocity.
    */
-  calculateReadinessHorizon({ totalUnits, completedUnits, weeklyHours }) {
+  calculateReadinessHorizon({ totalUnits, completedUnits, weeklyHours, velocityMultiplier = 1.0 }) {
     const remainingUnits = Math.max(0, totalUnits - completedUnits);
-    const avgHoursPerUnit = 2.0; // ~2 hours of focused study per effort unit
-    const totalRemainingHours = remainingUnits * avgHoursPerUnit;
+    const avgHoursPerUnit = 2.0;
+    const totalRemainingHours = (remainingUnits * avgHoursPerUnit) / Math.max(0.5, velocityMultiplier);
     const effectiveWeeklyHours = Math.max(2, weeklyHours || 14);
 
-    const estimatedWeeks = Math.ceil(totalRemainingHours / effectiveWeeklyHours);
+    const estimatedWeeks = Math.max(1, Math.ceil(totalRemainingHours / effectiveWeeklyHours));
     const months = (estimatedWeeks / 4.33).toFixed(1);
 
     const completionRate = totalUnits > 0 ? (completedUnits / totalUnits) * 100 : 0;
@@ -139,78 +218,278 @@ class CIEService {
       estimatedWeeks,
       targetCompletionEstimate: `~${months} months (${estimatedWeeks} weeks)`,
       currentPreparednessScore: preparednessScore,
-      rationale: `Based on ${remainingUnits} remaining workload units (${totalRemainingHours} planned hours) at ${effectiveWeeklyHours} hrs/week.`
+      rationale: `Based on ${remainingUnits} remaining units at ${effectiveWeeklyHours} hrs/week (${velocityMultiplier.toFixed(2)}x velocity).`
     };
+  }
+
+  /**
+   * Computes daily target pace and non-punitive missed workload reallocation
+   */
+  calculatePacingHealth(weeklyHours = 14, totalUnits = 30, completedUnits = 0, lastEngagedAt = null) {
+    const remainingUnits = Math.max(0, totalUnits - completedUnits);
+    // Assuming 5 active study days per week
+    const studyDaysPerWeek = 5;
+    const hoursPerDay = weeklyHours / studyDaysPerWeek;
+    const dailyTargetUnits = Number((hoursPerDay / 2.0).toFixed(1)); // ~2 hrs per effort unit
+
+    let driftUnits = 0;
+    let status = 'OnPace';
+
+    if (lastEngagedAt) {
+      const daysSinceEngagement = (Date.now() - new Date(lastEngagedAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceEngagement > 2) {
+        // Missed days identified: workload is redistributed evenly over remaining horizon
+        driftUnits = Number(Math.min(remainingUnits, (daysSinceEngagement - 1) * dailyTargetUnits).toFixed(1));
+        status = 'Reallocated';
+      }
+    }
+
+    return {
+      dailyTargetUnits: Math.max(0.5, dailyTargetUnits),
+      driftUnits,
+      status
+    };
+  }
+
+  /**
+   * Dynamic adaptation triggered when student logs effort with mastery/confidence feedback
+   */
+  async adaptToEffortLog({ userId, topicId, confidenceScore = 3, unitsCovered = 1, durationMinutes = 45 }) {
+    const roadmap = await Roadmap.findOne({ user: userId });
+    const profile = await CareerProfile.findOne({ user: userId });
+    const topic = await PreparationTopic.findById(topicId);
+
+    if (!roadmap || !profile || !topic) return null;
+
+    let velocityMultiplier = profile.cieDerived?.velocityMultiplier || 1.0;
+    let adaptationReason = '';
+
+    // 1. Evaluate Mastery & Velocity based on student's confidence and effort
+    if (confidenceScore >= 4) {
+      // High confidence: Faster mastery detected
+      velocityMultiplier = Math.min(1.5, velocityMultiplier + 0.05);
+      adaptationReason = `High mastery (${confidenceScore}/5) on ${topic.title}: accelerated subsequent workload`;
+
+      // Scale down remaining units of next uncompleted topic in same category
+      for (const phase of roadmap.phases) {
+        if (phase.category === topic.category) {
+          for (const item of phase.topics) {
+            if (item.topic.toString() !== topicId.toString()) {
+              const pendingProg = await PreparationProgress.findOne({
+                user: userId,
+                topic: item.topic,
+                status: 'NotStarted'
+              });
+
+              if (pendingProg && pendingProg.totalAllocatedUnits > 1) {
+                pendingProg.totalAllocatedUnits = Math.max(1, pendingProg.totalAllocatedUnits - 1);
+                pendingProg.remainingUnits = pendingProg.totalAllocatedUnits;
+                await pendingProg.save();
+                item.allocatedEffortUnits = pendingProg.totalAllocatedUnits;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // Add to mastered skills
+      await CareerProfile.findOneAndUpdate(
+        { user: userId },
+        { $addToSet: { 'cieDerived.masteredSkills': topic.title } }
+      );
+    } else if (confidenceScore <= 2) {
+      // Struggling / low confidence: needs consolidation
+      velocityMultiplier = Math.max(0.7, velocityMultiplier - 0.05);
+      adaptationReason = `Low confidence (${confidenceScore}/5) on ${topic.title}: added reinforcement review buffer`;
+
+      // Ensure current topic has remaining unit for consolidation
+      const prog = await PreparationProgress.findOne({ user: userId, topic: topicId });
+      if (prog && prog.remainingUnits === 0) {
+        prog.totalAllocatedUnits += 1;
+        prog.remainingUnits = 1;
+        prog.status = 'InProgress';
+        await prog.save();
+      }
+    } else {
+      adaptationReason = `Steady progress logged on ${topic.title}`;
+    }
+
+    // 2. Recalculate Roadmap unit totals
+    const allProgress = await PreparationProgress.find({ user: userId });
+    const totalAllocated = allProgress.reduce((acc, p) => acc + (p.totalAllocatedUnits || 0), 0);
+    const completed = allProgress.reduce((acc, p) => acc + (p.completedUnits || 0), 0);
+    const remaining = Math.max(0, totalAllocated - completed);
+
+    roadmap.totalAllocatedUnits = totalAllocated;
+    roadmap.completedUnits = completed;
+    roadmap.remainingUnits = remaining;
+    roadmap.adaptationCount += 1;
+    roadmap.lastAdaptedReason = adaptationReason;
+    roadmap.lastAdaptedAt = new Date();
+    await roadmap.save();
+
+    // 3. Recalculate readiness horizon & pacing health
+    const readinessHorizon = this.calculateReadinessHorizon({
+      totalUnits: totalAllocated,
+      completedUnits: completed,
+      weeklyHours: profile.weeklyHours || 14,
+      velocityMultiplier
+    });
+
+    const pacingHealth = this.calculatePacingHealth(
+      profile.weeklyHours || 14,
+      totalAllocated,
+      completed,
+      new Date()
+    );
+
+    await CareerProfile.findOneAndUpdate(
+      { user: userId },
+      {
+        'cieDerived.readinessHorizon': readinessHorizon,
+        'cieDerived.pacingHealth': pacingHealth,
+        'cieDerived.velocityMultiplier': velocityMultiplier,
+        'cieDerived.lastEvaluatedAt': new Date()
+      }
+    );
+
+    return { roadmap, readinessHorizon, pacingHealth };
   }
 
   /**
    * Re-evaluates readiness when student updates weekly time or target domain
    */
-  async adaptRoadmapToTimeChange(userId, newWeeklyHours) {
+  async adaptRoadmapToProfileChange(userId, newProfileData) {
+    const profile = await CareerProfile.findOne({ user: userId });
+    if (!profile) return null;
+
+    if (newProfileData.targetDomain && newProfileData.targetDomain !== profile.targetDomain) {
+      profile.targetDomain = newProfileData.targetDomain;
+      if (newProfileData.dsaPreference) profile.dsaPreference = newProfileData.dsaPreference;
+      await profile.save();
+
+      // Full roadmap restructuring for new domain/priorities
+      const updatedRoadmap = await this.generateBaselineRoadmap(userId, profile);
+      return { roadmap: updatedRoadmap, restructured: true };
+    }
+
+    if (newProfileData.weeklyHours && newProfileData.weeklyHours !== profile.weeklyHours) {
+      profile.weeklyHours = Number(newProfileData.weeklyHours);
+      await profile.save();
+    }
+
     const roadmap = await Roadmap.findOne({ user: userId });
     if (!roadmap) return null;
 
     const readinessHorizon = this.calculateReadinessHorizon({
       totalUnits: roadmap.totalAllocatedUnits,
       completedUnits: roadmap.completedUnits,
-      weeklyHours: newWeeklyHours
+      weeklyHours: profile.weeklyHours,
+      velocityMultiplier: profile.cieDerived?.velocityMultiplier || 1.0
     });
+
+    const pacingHealth = this.calculatePacingHealth(
+      profile.weeklyHours,
+      roadmap.totalAllocatedUnits,
+      roadmap.completedUnits
+    );
 
     await CareerProfile.findOneAndUpdate(
       { user: userId },
       {
-        weeklyHours: newWeeklyHours,
         'cieDerived.readinessHorizon': readinessHorizon,
+        'cieDerived.pacingHealth': pacingHealth,
         'cieDerived.lastEvaluatedAt': new Date()
       }
     );
 
     roadmap.adaptationCount += 1;
-    roadmap.lastAdaptedReason = `Adjusted study velocity to ${newWeeklyHours} hrs/week`;
+    roadmap.lastAdaptedReason = `Adjusted study parameters: ${profile.weeklyHours} hrs/week`;
     roadmap.lastAdaptedAt = new Date();
     await roadmap.save();
 
-    return { roadmap, readinessHorizon };
+    return { roadmap, readinessHorizon, pacingHealth };
   }
 
   /**
-   * Compute CIE match score for an opportunity given a student profile
+   * Compute CIE match score for an opportunity given student profile and actual completed progress.
+   * Compares verified skills vs required skills to return genuine matchedSkills and skillGaps.
    */
-  calculateOpportunityMatch(opportunity, profile, user) {
-    let score = 50;
+  async calculateOpportunityMatch(opportunity, profile, user) {
+    let score = 40;
     const reasons = [];
 
-    // 1. Domain match
-    if (opportunity.domain === profile.targetDomain || opportunity.domain === 'SoftwareEngineering') {
-      score += 25;
-      reasons.push(`Direct alignment with your ${profile.targetDomain} career path`);
+    // 1. Gather all student skills (verified completed topics + stated profile languages & interests)
+    const completedProgress = await PreparationProgress.find({
+      user: user?._id || profile?.user,
+      status: 'Completed'
+    }).populate('topic');
+
+    const completedTopicNames = completedProgress
+      .map(p => p.topic?.title?.toLowerCase() || '')
+      .filter(Boolean);
+
+    const completedCategories = completedProgress
+      .map(p => p.topic?.category?.toLowerCase() || '')
+      .filter(Boolean);
+
+    const statedInterests = (profile?.interests || []).map(s => s.toLowerCase());
+    const statedLanguages = (profile?.knownLanguages || []).map(s => s.toLowerCase());
+    const studentSkillsPool = [...completedTopicNames, ...completedCategories, ...statedInterests, ...statedLanguages];
+
+    // 2. Skill & Gap Analysis against Opportunity Required Skills
+    const requiredSkills = opportunity.requiredSkills || [];
+    const matchedSkills = [];
+    const skillGaps = [];
+
+    for (const req of requiredSkills) {
+      const reqLower = req.toLowerCase();
+      const isMatched = studentSkillsPool.some(s =>
+        s.includes(reqLower) || reqLower.includes(s) ||
+        (reqLower.includes('dsa') && studentSkillsPool.includes('dsa')) ||
+        (reqLower.includes('sql') && (studentSkillsPool.includes('dbms') || studentSkillsPool.includes('databases'))) ||
+        (reqLower.includes('react') && studentSkillsPool.some(s => s.includes('react') || s.includes('web')))
+      );
+
+      if (isMatched) {
+        matchedSkills.push(req);
+      } else {
+        skillGaps.push(req);
+      }
     }
 
-    // 2. Skills match
-    const studentInterests = (profile.interests || []).map(s => s.toLowerCase());
-    const studentLanguages = (profile.knownLanguages || []).map(s => s.toLowerCase());
-    const studentSkills = [...studentInterests, ...studentLanguages];
-
-    const matchedReqs = (opportunity.requiredSkills || []).filter(skill =>
-      studentSkills.some(s => s.includes(skill.toLowerCase()) || skill.toLowerCase().includes(s))
-    );
-
-    if (matchedReqs.length > 0) {
-      score += Math.min(20, matchedReqs.length * 7);
-      reasons.push(`Matches your skills in ${matchedReqs.join(', ')}`);
+    // 3. Domain alignment
+    if (opportunity.domain === profile?.targetDomain || opportunity.domain === 'SoftwareEngineering') {
+      score += 20;
+      reasons.push(`Aligned with your ${profile?.targetDomain || 'Software Engineering'} track`);
     }
 
-    // 3. Graduation year eligibility
+    // 4. Skills match scoring
+    if (requiredSkills.length > 0) {
+      const matchRatio = matchedSkills.length / requiredSkills.length;
+      score += Math.round(matchRatio * 25);
+      if (matchedSkills.length > 0) {
+        reasons.push(`Verified skills: ${matchedSkills.slice(0, 3).join(', ')}`);
+      }
+      if (skillGaps.length > 0) {
+        reasons.push(`Skill gaps to bridge: ${skillGaps.slice(0, 2).join(', ')}`);
+      }
+    }
+
+    // 5. Graduation year eligibility
     if (user?.graduationYear && opportunity.targetGraduationYears?.includes(user.graduationYear)) {
-      score += 10;
-      reasons.push(`Targeted for Class of ${user.graduationYear} graduates`);
+      score += 15;
+      reasons.push(`Direct eligibility for Class of ${user.graduationYear}`);
     }
 
-    // Cap score at 98 max
     const finalScore = Math.min(98, Math.max(35, score));
+
     return {
       matchScore: finalScore,
-      matchReasons: reasons.length > 0 ? reasons : ['General Software Engineering foundational match']
+      matchReasons: reasons.length > 0 ? reasons : ['Foundational Software Engineering match'],
+      matchedSkills,
+      skillGaps
     };
   }
 }

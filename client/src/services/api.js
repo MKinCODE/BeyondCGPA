@@ -57,6 +57,7 @@ export const authAPI = {
 
 // Profile APIs
 export const profileAPI = {
+  getNextOnboardingQuestion: (answers) => api.post('/profile/onboarding/next-question', { answers }),
   submitOnboarding: (data) => api.post('/profile/onboarding', data),
   getProfile: () => api.get('/profile'),
   updateProfile: (data) => api.put('/profile', data)

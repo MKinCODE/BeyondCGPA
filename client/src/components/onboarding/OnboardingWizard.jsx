@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import {
@@ -12,8 +12,11 @@ import {
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  Building,
-  GraduationCap
+  GraduationCap,
+  Layers,
+  Zap,
+  Target,
+  Sliders
 } from 'lucide-react';
 import Button from '../common/Button';
 import Card from '../common/Card';
@@ -22,56 +25,127 @@ import { profileAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useCIE } from '../../context/CIEContext';
 
-const DOMAIN_OPTIONS = [
-  { id: 'Fullstack', title: 'Full Stack Engineering', desc: 'Frontend + Backend APIs, databases & production architecture', icon: Code },
-  { id: 'Backend', title: 'Backend & Distributed Systems', desc: 'High-concurrency microservices, caching, Kafka, databases', icon: Server },
-  { id: 'Frontend', title: 'Frontend & Web Architecture', desc: 'Modern React, performance optimization, UX & state systems', icon: Compass },
-  { id: 'AI/ML', title: 'AI & Machine Learning Engineering', desc: 'LLM agents, PyTorch, model deployment & data pipelines', icon: Cpu },
-  { id: 'Cloud/DevOps', title: 'Cloud & DevOps Infrastructure', desc: 'Kubernetes, Docker, CI/CD pipelines & reliability', icon: Database },
-  { id: 'Undecided', title: 'Undecided / Exploring', desc: 'Build rock-solid Core CS, DSA, and explore multiple tracks', icon: Sparkles }
-];
+const DOMAIN_ICONS = {
+  Fullstack: Code,
+  Backend: Server,
+  Frontend: Compass,
+  'AI/ML': Cpu,
+  'Cloud/DevOps': Database,
+  Undecided: Sparkles
+};
 
 export const OnboardingWizard = () => {
   const { user, updateLocalUser } = useAuth();
   const { refreshAll } = useCIE();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    targetDomain: 'Fullstack',
+  const [answers, setAnswers] = useState({
     college: user?.college || '',
-    branch: user?.branch || 'Computer Science & Engineering',
-    graduationYear: user?.graduationYear || 2027,
-    weeklyHours: 14,
-    preferredPace: 'Balanced',
-    currentProficiency: {
-      dsa: 'Beginner',
-      development: 'Beginner',
-      coreCS: 'Beginner',
-      systemDesign: 'Beginner'
-    },
-    targetCompaniesCategory: ['Product-based', 'Startups', 'Tech Giants'],
-    interests: ['Web Development', 'System Architecture', 'APIs'],
-    knownLanguages: ['JavaScript', 'C++', 'Python']
+    branch: user?.branch || 'Computer Science & Engineering'
   });
 
-  const handleNext = () => {
-    if (step < 5) setStep(step + 1);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [currentSelection, setCurrentSelection] = useState(null);
+  const [isLoadingQuestion, setIsLoadingQuestion] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompletedState, setIsCompletedState] = useState(false);
+
+  // Fetch next question dynamically given previous answers
+  const fetchNextQuestion = async (updatedAnswers) => {
+    setIsLoadingQuestion(true);
+    try {
+      const res = await profileAPI.getNextOnboardingQuestion(updatedAnswers);
+      if (res.data?.success) {
+        const q = res.data.question;
+        if (q.completed) {
+          setIsCompletedState(true);
+        } else {
+          setCurrentQuestion(q);
+          // Set initial selection if existing or default
+          if (updatedAnswers[q.id] !== undefined) {
+            setCurrentSelection(updatedAnswers[q.id]);
+          } else if (q.type === 'slider') {
+            setCurrentSelection(q.default || 14);
+          } else if (q.type === 'multi_select') {
+            setCurrentSelection(q.options?.map(o => o.value) || []);
+          } else {
+            setCurrentSelection(null);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load next onboarding question:', err.message);
+    } finally {
+      setIsLoadingQuestion(false);
+    }
   };
 
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
+  useEffect(() => {
+    fetchNextQuestion(answers);
+  }, []);
+
+  const handleSelectOption = (val) => {
+    setCurrentSelection(val);
+  };
+
+  const handleToggleMulti = (val) => {
+    const list = Array.isArray(currentSelection) ? [...currentSelection] : [];
+    if (list.includes(val)) {
+      setCurrentSelection(list.filter(item => item !== val));
+    } else {
+      setCurrentSelection([...list, val]);
+    }
+  };
+
+  const handleNext = async () => {
+    if (!currentQuestion) return;
+
+    const key = currentQuestion.id;
+    const val = currentSelection;
+    if (currentQuestion.required && (val === null || val === undefined || (Array.isArray(val) && val.length === 0))) {
+      alert('Please make a selection to continue calibration.');
+      return;
+    }
+
+    const newAnswers = { ...answers, [key]: val };
+    setAnswers(newAnswers);
+    setHistory([...history, { question: currentQuestion, selected: val }]);
+
+    await fetchNextQuestion(newAnswers);
+  };
+
+  const handleBack = async () => {
+    if (history.length === 0) return;
+
+    const newHistory = [...history];
+    const prevItem = newHistory.pop();
+    setHistory(newHistory);
+
+    // Remove the last answer
+    const newAnswers = { ...answers };
+    delete newAnswers[currentQuestion?.id || ''];
+    if (prevItem) {
+      delete newAnswers[prevItem.question.id];
+    }
+    setAnswers(newAnswers);
+    setIsCompletedState(false);
+
+    await fetchNextQuestion(newAnswers);
   };
 
   const handleFinish = async () => {
     setIsSubmitting(true);
     try {
+      // Include current question selection if not yet recorded
+      const finalAnswers = { ...answers };
+      if (currentQuestion && currentSelection !== null && currentSelection !== undefined) {
+        finalAnswers[currentQuestion.id] = currentSelection;
+      }
+
       const res = await profileAPI.submitOnboarding({
-        ...formData,
-        rawAnswers: formData
+        ...finalAnswers,
+        rawAnswers: finalAnswers
       });
 
       if (res.data?.success) {
@@ -86,311 +160,253 @@ export const OnboardingWizard = () => {
         navigate('/dashboard');
       }
     } catch (err) {
-      console.error('Failed to submit onboarding:', err.message);
+      console.error('Failed to submit dynamic onboarding:', err.message);
       alert('Error calibrating career profile. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const questionNum = currentQuestion?.questionNumber || (history.length + 1);
+  const maxLimit = 15;
+  const targetOptimal = 8;
+  const progressPercent = Math.min(100, Math.round((questionNum / targetOptimal) * 100));
+
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 bg-white">
-      {/* Step Progress Header */}
-      <div className="mb-8 text-center">
+      {/* Header */}
+      <div className="mb-6 text-center">
         <Badge variant="teal" icon={Sparkles} className="mb-2">
-          CIE Baseline Calibration
+          CIE Dynamic Baseline Calibration
         </Badge>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B172A] tracking-tight">
-          Let's Calibrate Your Career Intelligence Profile
+          Personalized Career Intelligence Setup
         </h1>
         <p className="text-xs sm:text-sm text-[#64748B] mt-1">
-          BeyondCGPA adapts your roadmap, workload units, and opportunities to your personal pace.
+          Adaptive questioning tailors your roadmap phases, DSA priorities, and workload units.
         </p>
 
-        {/* Progress Bar */}
-        <div className="flex items-center justify-center gap-2 mt-6">
-          {[1, 2, 3, 4, 5].map((i) => (
+        {/* Dynamic Progress Indicator */}
+        <div className="mt-5 max-w-xs mx-auto">
+          <div className="flex justify-between text-xs text-[#64748B] font-medium mb-1.5">
+            <span>Question {questionNum} of ~5–8</span>
+            <span className="text-[11px] text-slate-400">Hard limit: {maxLimit}</span>
+          </div>
+          <div className="w-full bg-[#E2E8F0] h-2 rounded-full overflow-hidden">
             <div
-              key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                step === i
-                  ? 'w-10 bg-[#12B8A6]'
-                  : step > i
-                  ? 'w-6 bg-[#087F73]'
-                  : 'w-6 bg-[#E2E8F0]'
-              }`}
+              className="bg-[#12B8A6] h-full transition-all duration-300 rounded-full"
+              style={{ width: `${Math.min(100, progressPercent)}%` }}
             />
-          ))}
+          </div>
         </div>
       </div>
 
       <Card className="bg-white p-6 sm:p-8 shadow-md border-[#E2E8F0]">
-        {/* Step 1: Target Career Domain */}
-        {step === 1 && (
-          <div className="space-y-6 animate-fade-in">
-            <div>
-              <h2 className="text-lg font-bold text-[#0B172A]">1. What is your primary career target?</h2>
-              <p className="text-xs text-[#64748B] mt-0.5">You can adjust this anytime in your profile settings.</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {DOMAIN_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                const selected = formData.targetDomain === opt.id;
-                return (
-                  <div
-                    key={opt.id}
-                    onClick={() => setFormData({ ...formData, targetDomain: opt.id })}
-                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
-                      selected
-                        ? 'border-[#12B8A6] bg-[#E5F7F4]/30 shadow-xs'
-                        : 'border-[#E2E8F0] hover:border-[#CBD5E1] bg-white hover:bg-[#F8FAFC]'
-                    }`}
-                  >
-                    <div className={`p-2.5 rounded-xl shrink-0 ${selected ? 'bg-[#12B8A6] text-white' : 'bg-[#F1F5F9] text-[#64748B]'}`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-[#0B172A]">{opt.title}</h3>
-                      <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">{opt.desc}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {isLoadingQuestion ? (
+          <div className="py-16 text-center space-y-3">
+            <div className="w-8 h-8 border-3 border-[#12B8A6] border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-xs text-[#64748B]">CIE is evaluating your profile calibration...</p>
           </div>
-        )}
-
-        {/* Step 2: College & Graduation Year */}
-        {step === 2 && (
-          <div className="space-y-6 animate-fade-in">
-            <div>
-              <h2 className="text-lg font-bold text-[#0B172A]">2. Tell us about your academic timeline</h2>
-              <p className="text-xs text-[#64748B] mt-0.5">Used for calculating your readiness horizon and internship eligibility.</p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[#0B172A] uppercase tracking-wider mb-1.5">
-                  College / University
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. National Institute of Technology / IIIT / VIT"
-                  value={formData.college}
-                  onChange={(e) => setFormData({ ...formData, college: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#12B8A6] bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#0B172A] uppercase tracking-wider mb-1.5">
-                  Degree / Branch
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Computer Science and Engineering"
-                  value={formData.branch}
-                  onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#12B8A6] bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#0B172A] uppercase tracking-wider mb-1.5">
-                  Graduation Year
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[2025, 2026, 2027, 2028].map((year) => (
-                    <button
-                      key={year}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, graduationYear: year })}
-                      className={`py-2.5 rounded-xl text-sm font-bold border transition-all cursor-pointer ${
-                        formData.graduationYear === year
-                          ? 'bg-[#12B8A6] text-white border-[#12B8A6]'
-                          : 'bg-white text-[#0B172A] border-[#E2E8F0] hover:bg-[#F8FAFC]'
-                      }`}
-                    >
-                      {year}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Weekly Time Commitment */}
-        {step === 3 && (
-          <div className="space-y-6 animate-fade-in">
-            <div>
-              <h2 className="text-lg font-bold text-[#0B172A]">3. How many hours can you commit weekly?</h2>
-              <p className="text-xs text-[#64748B] mt-0.5">
-                BeyondCGPA distributes workload units across your availability. Missed days do not penalize you.
-              </p>
-            </div>
-
-            <div className="bg-[#F8FAFC] p-6 rounded-2xl border border-[#E2E8F0] text-center space-y-4">
-              <div className="text-4xl font-extrabold text-[#087F73]">
-                {formData.weeklyHours} <span className="text-base font-normal text-[#64748B]">hours / week</span>
-              </div>
-
-              <input
-                type="range"
-                min="4"
-                max="40"
-                step="2"
-                value={formData.weeklyHours}
-                onChange={(e) => setFormData({ ...formData, weeklyHours: Number(e.target.value) })}
-                className="w-full h-2 bg-[#E2E8F0] rounded-lg appearance-none cursor-pointer accent-[#12B8A6]"
-              />
-
-              <div className="flex justify-between text-xs text-[#64748B]">
-                <span>4 hrs (Light)</span>
-                <span>14 hrs (Standard Pace)</span>
-                <span>40 hrs (Full-time Prep)</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#0B172A] uppercase tracking-wider mb-2">
-                Preferred Learning Strategy
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { id: 'Balanced', label: 'Balanced Pace', desc: 'Steady mix of DSA, Dev & Core CS' },
-                  { id: 'Accelerated', label: 'Fast-Track', desc: 'Focus strictly on high-yield interview topics' },
-                  { id: 'DeepFoundation', label: 'Deep Foundation', desc: 'Thorough conceptual mastery from scratch' }
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, preferredPace: p.id })}
-                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      formData.preferredPace === p.id
-                        ? 'border-[#12B8A6] bg-[#E5F7F4] text-[#087F73]'
-                        : 'border-[#E2E8F0] bg-white text-[#0B172A] hover:bg-[#F8FAFC]'
-                    }`}
-                  >
-                    <p className="text-xs font-bold">{p.label}</p>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">{p.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Current Proficiency Self-Assessment */}
-        {step === 4 && (
-          <div className="space-y-6 animate-fade-in">
-            <div>
-              <h2 className="text-lg font-bold text-[#0B172A]">4. Rate your current comfort level</h2>
-              <p className="text-xs text-[#64748B] mt-0.5">The CIE will adjust allocated effort units based on your baseline.</p>
-            </div>
-
-            <div className="space-y-4">
-              {[
-                { key: 'dsa', label: 'Data Structures & Algorithms (DSA)', desc: 'Arrays, Two Pointers, Trees, Graphs, DP' },
-                { key: 'development', label: 'Web & API Development', desc: 'React, Node.js, Express, RESTful APIs' },
-                { key: 'coreCS', label: 'Core CS (DBMS, OS, Networks, OOP)', desc: 'Indexes, Transactions, Concurrency, Threads' },
-                { key: 'systemDesign', label: 'System Design & Distributed Tech', desc: 'Redis, Caching, Kafka, Load Balancing' }
-              ].map((item) => (
-                <div key={item.key} className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <h3 className="text-xs font-bold text-[#0B172A]">{item.label}</h3>
-                    <p className="text-[11px] text-[#64748B]">{item.desc}</p>
-                  </div>
-
-                  <div className="flex gap-1.5 shrink-0">
-                    {['Beginner', 'Intermediate', 'Advanced'].map((lvl) => (
-                      <button
-                        key={lvl}
-                        type="button"
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            currentProficiency: {
-                              ...formData.currentProficiency,
-                              [item.key]: lvl
-                            }
-                          })
-                        }
-                        className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                          formData.currentProficiency[item.key] === lvl
-                            ? 'bg-[#12B8A6] text-white border-[#12B8A6]'
-                            : 'bg-white text-[#64748B] border-[#E2E8F0] hover:bg-slate-50'
-                        }`}
-                      >
-                        {lvl}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Synthesis & Activation */}
-        {step === 5 && (
-          <div className="space-y-6 animate-fade-in text-center py-4">
+        ) : isCompletedState ? (
+          /* Calibration Synthesis Screen */
+          <div className="space-y-6 text-center py-4 animate-fade-in">
             <div className="w-16 h-16 rounded-2xl bg-[#E5F7F4] text-[#12B8A6] mx-auto flex items-center justify-center">
               <Sparkles className="w-8 h-8" />
             </div>
 
             <div>
-              <h2 className="text-2xl font-extrabold text-[#0B172A]">All Set for Calibration!</h2>
+              <h2 className="text-2xl font-extrabold text-[#0B172A]">Calibration Profile Complete!</h2>
               <p className="text-xs sm:text-sm text-[#64748B] max-w-md mx-auto mt-2 leading-relaxed">
-                Click below to let the Career Intelligence Engine generate your customized adaptive roadmap, compute your readiness horizon, and match verified opportunities.
+                The Career Intelligence Engine has acquired sufficient depth to build your adaptive roadmap, workload pacing, and opportunity matching.
               </p>
             </div>
 
-            <div className="bg-[#F8FAFC] p-4 rounded-2xl border border-[#E2E8F0] max-w-md mx-auto text-left text-xs space-y-2">
+            <div className="bg-[#F8FAFC] p-4 rounded-2xl border border-[#E2E8F0] max-w-md mx-auto text-left text-xs space-y-2.5">
               <div className="flex justify-between">
-                <span className="text-[#64748B]">Target Path:</span>
-                <strong className="text-[#0B172A]">{formData.targetDomain}</strong>
+                <span className="text-[#64748B]">Target Track:</span>
+                <strong className="text-[#0B172A]">{answers.targetDomain || 'Fullstack'}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">DSA Priority Strategy:</span>
+                <strong className="text-[#0B172A]">{answers.dsaPreference || 'Balanced'}</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#64748B]">Graduation Year:</span>
-                <strong className="text-[#0B172A]">{formData.graduationYear}</strong>
+                <strong className="text-[#0B172A]">{answers.graduationYear || new Date().getFullYear() + 2}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748B]">Weekly Time:</span>
-                <strong className="text-[#087F73]">{formData.weeklyHours} hours / week</strong>
+                <span className="text-[#64748B]">Weekly Time Commitment:</span>
+                <strong className="text-[#087F73]">{answers.weeklyHours || 14} hrs / week</strong>
               </div>
             </div>
+
+            <div className="pt-4">
+              <Button
+                variant="primary"
+                size="lg"
+                isLoading={isSubmitting}
+                onClick={handleFinish}
+                icon={CheckCircle2}
+                iconPosition="right"
+                className="w-full sm:w-auto"
+              >
+                Generate Adaptive Roadmap & Start
+              </Button>
+            </div>
           </div>
-        )}
+        ) : currentQuestion ? (
+          /* Dynamic Question Body */
+          <div className="space-y-6 animate-fade-in">
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-[#0B172A]">
+                {currentQuestion.title}
+              </h2>
+              {currentQuestion.subtitle && (
+                <p className="text-xs sm:text-sm text-[#64748B] mt-1">
+                  {currentQuestion.subtitle}
+                </p>
+              )}
+            </div>
 
-        {/* Navigation Footer Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-[#F1F5F9] mt-6">
-          {step > 1 ? (
-            <Button variant="ghost" icon={ArrowLeft} onClick={handleBack}>
-              Back
-            </Button>
-          ) : (
-            <div />
-          )}
+            {/* Render Question Options based on type */}
+            {currentQuestion.type === 'single_select' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {currentQuestion.options?.map((opt) => {
+                  const Icon = DOMAIN_ICONS[opt.value] || Target;
+                  const isSelected = currentSelection === opt.value;
+                  return (
+                    <div
+                      key={opt.value}
+                      onClick={() => handleSelectOption(opt.value)}
+                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
+                        isSelected
+                          ? 'border-[#12B8A6] bg-[#E5F7F4]/30 shadow-xs'
+                          : 'border-[#E2E8F0] hover:border-[#CBD5E1] bg-white hover:bg-[#F8FAFC]'
+                      }`}
+                    >
+                      <div className={`p-2.5 rounded-xl shrink-0 ${isSelected ? 'bg-[#12B8A6] text-white' : 'bg-[#F1F5F9] text-[#64748B]'}`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-[#0B172A]">{opt.label}</h3>
+                        {opt.description && (
+                          <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">{opt.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-          {step < 5 ? (
-            <Button variant="primary" icon={ArrowRight} iconPosition="right" onClick={handleNext}>
-              Continue
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              size="lg"
-              isLoading={isSubmitting}
-              onClick={handleFinish}
-              icon={CheckCircle2}
-              iconPosition="right"
-            >
-              Generate Adaptive Roadmap
-            </Button>
-          )}
-        </div>
+            {currentQuestion.type === 'year_select' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                  {currentQuestion.options?.map((opt) => {
+                    const isSelected = currentSelection === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => handleSelectOption(opt.value)}
+                        className={`py-3.5 px-2 rounded-xl text-sm font-bold border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#12B8A6] text-white border-[#12B8A6] shadow-xs'
+                            : 'bg-white text-[#0B172A] border-[#E2E8F0] hover:bg-[#F8FAFC]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {currentQuestion.type === 'slider' && (
+              <div className="bg-[#F8FAFC] p-6 rounded-2xl border border-[#E2E8F0] text-center space-y-4">
+                <div className="text-4xl font-extrabold text-[#087F73]">
+                  {currentSelection ?? 14} <span className="text-base font-normal text-[#64748B]">hours / week</span>
+                </div>
+
+                <input
+                  type="range"
+                  min={currentQuestion.min || 4}
+                  max={currentQuestion.max || 40}
+                  step={currentQuestion.step || 2}
+                  value={currentSelection ?? 14}
+                  onChange={(e) => handleSelectOption(Number(e.target.value))}
+                  className="w-full h-2 bg-[#E2E8F0] rounded-lg appearance-none cursor-pointer accent-[#12B8A6]"
+                />
+
+                <div className="flex justify-between text-xs text-[#64748B]">
+                  <span>4 hrs (Light)</span>
+                  <span>14 hrs (Standard Pace)</span>
+                  <span>40 hrs (Full-time Prep)</span>
+                </div>
+              </div>
+            )}
+
+            {currentQuestion.type === 'multi_select' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {currentQuestion.options?.map((opt) => {
+                  const isChecked = Array.isArray(currentSelection) && currentSelection.includes(opt.value);
+                  return (
+                    <div
+                      key={opt.value}
+                      onClick={() => handleToggleMulti(opt.value)}
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                        isChecked
+                          ? 'border-[#12B8A6] bg-[#E5F7F4]/40 text-[#087F73]'
+                          : 'border-[#E2E8F0] bg-white text-[#0B172A] hover:bg-[#F8FAFC]'
+                      }`}
+                    >
+                      <span className="text-xs font-bold">{opt.label}</span>
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                        isChecked ? 'bg-[#12B8A6] border-[#12B8A6] text-white' : 'border-[#CBD5E1]'
+                      }`}>
+                        {isChecked && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-[#F1F5F9] mt-6 gap-3">
+              <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2">
+                {history.length > 0 && (
+                  <Button variant="ghost" icon={ArrowLeft} onClick={handleBack}>
+                    Back
+                  </Button>
+                )}
+
+                {currentQuestion.canFinishEarly && (
+                  <Button
+                    variant="pale-teal"
+                    size="sm"
+                    onClick={handleFinish}
+                    isLoading={isSubmitting}
+                    icon={CheckCircle2}
+                  >
+                    Finish Calibration Now
+                  </Button>
+                )}
+              </div>
+
+              <Button
+                variant="primary"
+                icon={ArrowRight}
+                iconPosition="right"
+                onClick={handleNext}
+                className="w-full sm:w-auto"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Card>
     </div>
   );

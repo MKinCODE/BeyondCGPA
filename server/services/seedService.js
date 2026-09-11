@@ -469,18 +469,20 @@ const initialIndustryTopics = [
   }
 ];
 
+const currentYear = new Date().getFullYear();
+
 const initialOpportunities = [
   {
     source: 'Greenhouse',
-    sourceId: 'gh-cred-swe-intern-2026',
-    title: 'Software Engineer Intern (Summer 2026 / Winter 2026)',
+    sourceId: `gh-cred-swe-intern-${currentYear + 1}`,
+    title: `Software Engineer Intern (Summer ${currentYear + 1} / Winter ${currentYear + 1})`,
     company: 'CRED',
     companyLogo: 'https://api.dicebear.com/7.x/identicon/svg?seed=CRED',
     location: 'Bengaluru, India',
     type: 'Internship',
     workplaceType: 'Hybrid',
     domain: 'Fullstack',
-    targetGraduationYears: [2026, 2027],
+    targetGraduationYears: [currentYear + 1, currentYear + 2],
     description: 'Join CRED\'s high-scale backend & payments platform team. Build low-latency microservices handling millions of financial transactions daily with 99.999% uptime.',
     responsibilities: [
       'Design clean REST and gRPC endpoints in Go or Node.js / Java',
@@ -496,7 +498,7 @@ const initialOpportunities = [
   },
   {
     source: 'Lever',
-    sourceId: 'lev-razorpay-backend-2026',
+    sourceId: `lev-razorpay-backend-${currentYear + 1}`,
     title: 'Backend Engineering Intern',
     company: 'Razorpay',
     companyLogo: 'https://api.dicebear.com/7.x/identicon/svg?seed=Razorpay',
@@ -504,7 +506,7 @@ const initialOpportunities = [
     type: 'Internship',
     workplaceType: 'Remote',
     domain: 'Backend',
-    targetGraduationYears: [2026, 2027, 2028],
+    targetGraduationYears: [currentYear + 1, currentYear + 2, currentYear + 3],
     description: 'Work on India\'s payment gateway infrastructure. You will work on payment routing algorithms, settlement engines, and high-concurrency API gateways.',
     responsibilities: [
       'Write robust, unit-tested backend code',
@@ -520,7 +522,7 @@ const initialOpportunities = [
   },
   {
     source: 'Ashby',
-    sourceId: 'ash-postman-fullstack-2026',
+    sourceId: `ash-postman-fullstack-${currentYear + 1}`,
     title: 'Early Career Full Stack Software Engineer',
     company: 'Postman',
     companyLogo: 'https://api.dicebear.com/7.x/identicon/svg?seed=Postman',
@@ -528,7 +530,7 @@ const initialOpportunities = [
     type: 'EarlyCareer',
     workplaceType: 'Hybrid',
     domain: 'Fullstack',
-    targetGraduationYears: [2025, 2026],
+    targetGraduationYears: [currentYear, currentYear + 1],
     description: 'Help build the world\'s leading API platform used by 30+ million developers. Build frontend UI experiences and resilient cloud microservices.',
     responsibilities: [
       'Develop modern React UI workflows with state-of-the-art UX',
@@ -544,7 +546,7 @@ const initialOpportunities = [
   },
   {
     source: 'StructuredExternal',
-    sourceId: 'ext-swiggy-ai-intern-2026',
+    sourceId: `ext-swiggy-ai-intern-${currentYear + 1}`,
     title: 'AI / Machine Learning Engineering Intern',
     company: 'Swiggy',
     companyLogo: 'https://api.dicebear.com/7.x/identicon/svg?seed=Swiggy',
@@ -552,7 +554,7 @@ const initialOpportunities = [
     type: 'Internship',
     workplaceType: 'Onsite',
     domain: 'AI/ML',
-    targetGraduationYears: [2026, 2027],
+    targetGraduationYears: [currentYear + 1, currentYear + 2],
     description: 'Work with the Swiggy AI Research team on real-time delivery time prediction, recommendation algorithms, and conversational search agents.',
     responsibilities: [
       'Train and evaluate ML models on large-scale logistics datasets',
@@ -568,7 +570,7 @@ const initialOpportunities = [
   },
   {
     source: 'Greenhouse',
-    sourceId: 'gh-uber-cloud-2026',
+    sourceId: `gh-uber-cloud-${currentYear + 1}`,
     title: 'Cloud & Infrastructure Engineer Intern',
     company: 'Uber',
     companyLogo: 'https://api.dicebear.com/7.x/identicon/svg?seed=Uber',
@@ -576,7 +578,7 @@ const initialOpportunities = [
     type: 'Internship',
     workplaceType: 'Hybrid',
     domain: 'Cloud/DevOps',
-    targetGraduationYears: [2026, 2027],
+    targetGraduationYears: [currentYear + 1, currentYear + 2],
     description: 'Scale Uber\'s global infrastructure. Build tooling for Kubernetes cluster orchestration, service mesh routing, and automated reliability testing.',
     responsibilities: [
       'Automate cloud infrastructure provisioning',

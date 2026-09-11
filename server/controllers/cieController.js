@@ -20,12 +20,21 @@ const getReadinessAnalysis = async (req, res, next) => {
     const totalAllocated = roadmap?.totalAllocatedUnits || 0;
     const completed = roadmap?.completedUnits || 0;
     const remaining = roadmap?.remainingUnits || totalAllocated;
+    const velocityMultiplier = profile.cieDerived?.velocityMultiplier || 1.0;
 
     const readinessHorizon = cieService.calculateReadinessHorizon({
       totalUnits: totalAllocated,
       completedUnits: completed,
-      weeklyHours: profile.weeklyHours || 14
+      weeklyHours: profile.weeklyHours || 14,
+      velocityMultiplier
     });
+
+    const pacingHealth = cieService.calculatePacingHealth(
+      profile.weeklyHours || 14,
+      totalAllocated,
+      completed,
+      progressList[0]?.lastEngagedAt
+    );
 
     // Compute category level breakdown
     const categoryStats = {};
@@ -45,8 +54,13 @@ const getReadinessAnalysis = async (req, res, next) => {
       success: true,
       analysis: {
         targetDomain: profile.targetDomain,
+        dsaPreference: profile.dsaPreference,
         weeklyHours: profile.weeklyHours,
         readinessHorizon,
+        pacingHealth,
+        velocityMultiplier,
+        focusRecommendation: profile.cieDerived?.focusRecommendation,
+        masteredSkills: profile.cieDerived?.masteredSkills || [],
         totalAllocatedUnits: totalAllocated,
         completedUnits: completed,
         remainingUnits: remaining,

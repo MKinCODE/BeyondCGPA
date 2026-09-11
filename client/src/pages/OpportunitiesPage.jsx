@@ -228,19 +228,40 @@ export const OpportunitiesPage = () => {
                       </div>
                     </div>
 
-                    {/* Skills Pills */}
-                    <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center gap-2 flex-wrap text-[11px]">
-                      <span className="text-[#64748B] font-semibold">Skills:</span>
-                      {(opp.requiredSkills || []).map((skill, idx) => (
-                        <span key={idx} className="px-2 py-0.5 rounded bg-[#F8FAFC] border border-[#E2E8F0] text-[#0B172A]">
-                          {skill}
-                        </span>
-                      ))}
-                      {(opp.preferredSkills || []).map((skill, idx) => (
-                        <span key={idx} className="px-2 py-0.5 rounded bg-white border border-[#E2E8F0] text-[#64748B]">
-                          {skill}
-                        </span>
-                      ))}
+                    {/* Real Skills & Gaps Breakdown */}
+                    <div className="mt-4 pt-3 border-t border-[#F1F5F9] space-y-2 text-[11px]">
+                      {item.matchedSkills && item.matchedSkills.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-emerald-700 font-bold">Skills Matched:</span>
+                          {item.matchedSkills.map((skill, idx) => (
+                            <span key={idx} className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 font-medium">
+                              ✓ {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {item.skillGaps && item.skillGaps.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-amber-800 font-bold">Gaps to Bridge:</span>
+                          {item.skillGaps.map((skill, idx) => (
+                            <span key={idx} className="px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-900 font-medium">
+                              ⚡ {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {(!item.matchedSkills || item.matchedSkills.length === 0) && (!item.skillGaps || item.skillGaps.length === 0) && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[#64748B] font-semibold">Skills:</span>
+                          {(opp.requiredSkills || []).map((skill, idx) => (
+                            <span key={idx} className="px-2 py-0.5 rounded bg-[#F8FAFC] border border-[#E2E8F0] text-[#0B172A]">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </Card>
                 </ScrollReveal>
@@ -346,6 +367,39 @@ export const OpportunitiesPage = () => {
                 </ul>
               </div>
             )}
+
+            {/* Skills & Gaps Breakdown in Modal */}
+            <div className="space-y-2 pt-2 border-t border-[#F1F5F9]">
+              {selectedOpp.matchedSkills && selectedOpp.matchedSkills.length > 0 && (
+                <div>
+                  <h5 className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
+                    Verified Skills in Your Profile
+                  </h5>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedOpp.matchedSkills.map((s, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs">
+                        ✓ {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedOpp.skillGaps && selectedOpp.skillGaps.length > 0 && (
+                <div>
+                  <h5 className="text-[11px] font-bold text-amber-800 uppercase tracking-wider mb-1">
+                    Recommended Roadmap Topics to Bridge
+                  </h5>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedOpp.skillGaps.map((s, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 text-xs font-medium">
+                        ⚡ {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="flex justify-between items-center pt-4 border-t border-[#F1F5F9]">
               <span className="font-semibold text-[#087F73]">{selectedOpp.opportunity.salaryRange}</span>

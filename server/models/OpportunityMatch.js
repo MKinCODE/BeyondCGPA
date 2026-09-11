@@ -26,6 +26,16 @@ const opportunityMatchSchema = new mongoose.Schema(
         type: String
       }
     ],
+    matchedSkills: [
+      {
+        type: String
+      }
+    ],
+    skillGaps: [
+      {
+        type: String
+      }
+    ],
     status: {
       type: String,
       enum: ['Discovered', 'Saved', 'Applied', 'Interviewing', 'Rejected', 'Offer'],

@@ -6,7 +6,7 @@ const cieService = require('./cieService');
 
 class PreparationEngine {
   /**
-   * Deterministically identifies Today's Focus: the next actionable preparation workload unit
+   * Deterministically identifies Today's Focus: the next actionable, unblocked preparation workload unit
    */
   async getTodaysFocus(userId) {
     const roadmap = await Roadmap.findOne({ user: userId }).populate('phases.topics.topic');
@@ -14,66 +14,85 @@ class PreparationEngine {
       return null;
     }
 
-    // 1. Look for any topic currently InProgress
-    const inProgress = await PreparationProgress.findOne({
+    // 1. Check for any topic currently InProgress with remaining effort units
+    const inProgressList = await PreparationProgress.find({
       user: userId,
       status: 'InProgress',
       remainingUnits: { $gt: 0 }
-    }).populate('topic');
+    }).populate('topic').sort({ updatedAt: -1 });
 
-    if (inProgress && inProgress.topic) {
-      return {
-        topic: inProgress.topic,
-        progress: inProgress,
-        reason: 'Continue active preparation unit',
-        category: inProgress.topic.category
-      };
+    if (inProgressList && inProgressList.length > 0) {
+      const active = inProgressList[0];
+      if (active && active.topic) {
+        return {
+          topic: active.topic,
+          progress: active,
+          reason: 'Continue active preparation unit',
+          category: active.topic.category,
+          isUnblocked: true
+        };
+      }
     }
 
-    // 2. Iterate sequentially through roadmap phases to find the first unblocked topic
+    // 2. Fetch all completed topics with their slugs to evaluate prerequisites
     const completedProgress = await PreparationProgress.find({
       user: userId,
       status: 'Completed'
-    }).select('topic');
+    }).populate('topic');
 
-    const completedTopicIds = new Set(completedProgress.map(p => p.topic.toString()));
+    const completedTopicIds = new Set(completedProgress.map(p => p.topic?._id?.toString() || p.topic?.toString()));
+    const completedTopicSlugs = new Set(completedProgress.map(p => p.topic?.slug).filter(Boolean));
 
+    // 3. Scan through roadmap phases (ordered according to student domain & priorities)
     for (const phase of roadmap.phases) {
       for (const item of phase.topics) {
         if (!item.topic) continue;
 
         const topicIdStr = item.topic._id ? item.topic._id.toString() : item.topic.toString();
         if (!completedTopicIds.has(topicIdStr)) {
-          // Check if progress record exists
+          const fullTopic = item.topic.title ? item.topic : await PreparationTopic.findById(topicIdStr);
+          if (!fullTopic) continue;
+
+          // Prerequisite Evaluation: verify all prerequisite slugs are mastered
+          const prerequisites = fullTopic.prerequisites || [];
+          const missingPrerequisites = prerequisites.filter(slug => !completedTopicSlugs.has(slug));
+
+          if (missingPrerequisites.length > 0) {
+            // Blocked by unsatisfied prerequisites; skip to next candidate topic
+            continue;
+          }
+
+          // Found the highest-priority, unblocked topic!
           let progress = await PreparationProgress.findOne({
             user: userId,
-            topic: item.topic._id || item.topic
+            topic: fullTopic._id
           }).populate('topic');
 
           if (!progress) {
             progress = await PreparationProgress.create({
               user: userId,
-              topic: item.topic._id || item.topic,
+              topic: fullTopic._id,
               status: 'NotStarted',
               totalAllocatedUnits: item.allocatedEffortUnits || 3,
               completedUnits: 0,
-              remainingUnits: item.allocatedEffortUnits || 3
+              remainingUnits: item.allocatedEffortUnits || 3,
+              confidenceScore: 3
             });
           }
-
-          const fullTopic = progress.topic || await PreparationTopic.findById(item.topic._id || item.topic);
 
           return {
             topic: fullTopic,
             progress,
-            reason: `Next priority in ${phase.title}`,
-            category: phase.category
+            reason: `Next unblocked priority in ${phase.title}`,
+            category: fullTopic.category || phase.category,
+            isUnblocked: true,
+            priority: item.priority || 'High'
           };
         }
       }
     }
 
-    // If all completed
+    // If all completed or all remaining are temporarily blocked
     return {
       topic: null,
       message: 'All roadmap preparation units completed! Ready for advanced mock interviews and applications.'
@@ -83,7 +102,7 @@ class PreparationEngine {
   /**
    * Logs preparation effort for a topic.
    * Workload-based: decrements remainingUnits, increments completedUnits.
-   * Missed days do NOT penalize or reset.
+   * Triggers CIE adaptation closed loop (velocity scaling, pace drift redistribution, prerequisite unblocking).
    */
   async logEffort({ userId, topicId, unitsCovered = 1, durationMinutes = 45, notes = '', confidenceScore = 3, completedQuestions = [] }) {
     let progress = await PreparationProgress.findOne({ user: userId, topic: topicId });
@@ -97,8 +116,8 @@ class PreparationEngine {
       progress = new PreparationProgress({
         user: userId,
         topic: topicId,
-        totalAllocatedUnits: topic.allocatedEffortUnits,
-        remainingUnits: topic.allocatedEffortUnits
+        totalAllocatedUnits: topic.allocatedEffortUnits || 3,
+        remainingUnits: topic.allocatedEffortUnits || 3
       });
     }
 
@@ -132,50 +151,16 @@ class PreparationEngine {
 
     await progress.save();
 
-    // Recalculate Roadmap totals
-    await this.syncRoadmapProgress(userId);
+    // Trigger CIE Closed Loop Adaptation (Velocity, Mastery, Workload Reallocation)
+    await cieService.adaptToEffortLog({
+      userId,
+      topicId,
+      confidenceScore,
+      unitsCovered: units,
+      durationMinutes
+    });
 
     return progress;
-  }
-
-  /**
-   * Syncs total completed/remaining units in Roadmap and updates CIE readiness horizon
-   */
-  async syncRoadmapProgress(userId) {
-    const allProgress = await PreparationProgress.find({ user: userId });
-    const totalAllocated = allProgress.reduce((acc, p) => acc + (p.totalAllocatedUnits || 0), 0);
-    const completed = allProgress.reduce((acc, p) => acc + (p.completedUnits || 0), 0);
-    const remaining = Math.max(0, totalAllocated - completed);
-
-    const roadmap = await Roadmap.findOneAndUpdate(
-      { user: userId },
-      {
-        totalAllocatedUnits: totalAllocated,
-        completedUnits: completed,
-        remainingUnits: remaining,
-        lastAdaptedAt: new Date()
-      },
-      { returnDocument: 'after' }
-    );
-
-    const profile = await CareerProfile.findOne({ user: userId });
-    if (profile && roadmap) {
-      const readinessHorizon = cieService.calculateReadinessHorizon({
-        totalUnits: totalAllocated,
-        completedUnits: completed,
-        weeklyHours: profile.weeklyHours || 14
-      });
-
-      await CareerProfile.findOneAndUpdate(
-        { user: userId },
-        {
-          'cieDerived.readinessHorizon': readinessHorizon,
-          'cieDerived.lastEvaluatedAt': new Date()
-        }
-      );
-    }
-
-    return roadmap;
   }
 }
 

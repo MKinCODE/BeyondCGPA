@@ -31,7 +31,13 @@ class OpportunityService {
       type: ['Internship', 'FullTime', 'EarlyCareer'].includes(rawItem.type) ? rawItem.type : 'Internship',
       workplaceType: ['Remote', 'Hybrid', 'Onsite'].includes(rawItem.workplaceType) ? rawItem.workplaceType : 'Remote',
       domain: rawItem.domain || 'SoftwareEngineering',
-      targetGraduationYears: rawItem.targetGraduationYears || [2025, 2026, 2027, 2028],
+      targetGraduationYears: rawItem.targetGraduationYears || [
+        new Date().getFullYear(),
+        new Date().getFullYear() + 1,
+        new Date().getFullYear() + 2,
+        new Date().getFullYear() + 3,
+        new Date().getFullYear() + 4
+      ],
       description: rawItem.description || 'Exciting software engineering role working on scalable systems.',
       responsibilities: rawItem.responsibilities || ['Design and implement features', 'Write clean unit tests', 'Collaborate with senior engineers'],
       requiredSkills: rawItem.requiredSkills || ['JavaScript', 'Data Structures', 'Problem Solving'],
@@ -93,21 +99,32 @@ class OpportunityService {
       let match = matchMap.get(opp._id.toString());
 
       if (!match) {
-        // Calculate CIE match score
-        const { matchScore, matchReasons } = cieService.calculateOpportunityMatch(opp, profile || {}, user);
+        // Calculate CIE match score & skills/gaps
+        const matchResult = await cieService.calculateOpportunityMatch(opp, profile || {}, user);
         match = await OpportunityMatch.create({
           user: userId,
           opportunity: opp._id,
-          matchScore,
-          matchReasons,
+          matchScore: matchResult.matchScore,
+          matchReasons: matchResult.matchReasons,
+          matchedSkills: matchResult.matchedSkills,
+          skillGaps: matchResult.skillGaps,
           status: 'Discovered'
         });
+      } else if (!match.matchedSkills || match.matchedSkills.length === 0) {
+        const matchResult = await cieService.calculateOpportunityMatch(opp, profile || {}, user);
+        match.matchScore = matchResult.matchScore;
+        match.matchReasons = matchResult.matchReasons;
+        match.matchedSkills = matchResult.matchedSkills;
+        match.skillGaps = matchResult.skillGaps;
+        await match.save();
       }
 
       feed.push({
         opportunity: opp,
         matchScore: match.matchScore,
         matchReasons: match.matchReasons,
+        matchedSkills: match.matchedSkills || [],
+        skillGaps: match.skillGaps || [],
         status: match.status,
         studentNotes: match.studentNotes,
         appliedDate: match.appliedDate
@@ -129,13 +146,15 @@ class OpportunityService {
       const opp = await Opportunity.findById(opportunityId);
       const user = await User.findById(userId);
       const profile = await CareerProfile.findOne({ user: userId });
-      const { matchScore, matchReasons } = cieService.calculateOpportunityMatch(opp, profile || {}, user);
+      const matchResult = await cieService.calculateOpportunityMatch(opp, profile || {}, user);
 
       match = new OpportunityMatch({
         user: userId,
         opportunity: opportunityId,
-        matchScore,
-        matchReasons
+        matchScore: matchResult.matchScore,
+        matchReasons: matchResult.matchReasons,
+        matchedSkills: matchResult.matchedSkills,
+        skillGaps: matchResult.skillGaps
       });
     }
 
@@ -204,7 +223,7 @@ class OpportunityService {
       }
 
       // 5. Calculate authoritative CIE match score
-      const { matchScore, matchReasons } = cieService.calculateOpportunityMatch(opportunity, profile, student);
+      const { matchScore, matchReasons } = await cieService.calculateOpportunityMatch(opportunity, profile, student);
 
       // 6. Relevance check: must meet threshold (>= 75) and domain alignment
       const isDomainAligned =
