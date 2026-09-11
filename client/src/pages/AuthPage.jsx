@@ -164,7 +164,10 @@ export const AuthPage = () => {
   };
 
   const googleConfigured = diagnostics?.googleOAuth?.configured;
-  const googleClientId = diagnostics?.googleOAuth?.clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const googleClientId =
+    diagnostics?.googleOAuth?.clientId ||
+    import.meta.env.GOOGLE_CLIENT_ID ||
+    import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleBtnRef = useRef(null);
 
   // Initialize Google Identity Services (GIS)

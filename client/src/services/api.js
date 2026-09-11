@@ -1,7 +1,11 @@
 import axios from 'axios';
 
 const resolveBaseURL = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
+  const envUrl =
+    import.meta.env.BACKEND_URL ||
+    import.meta.env.API_URL ||
+    import.meta.env.VITE_API_URL;
+
   if (!envUrl) {
     // Default to '/api' for local development via Vite proxy
     return '/api';

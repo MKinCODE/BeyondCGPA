@@ -15,24 +15,33 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
-// CORS configuration supporting both local Vite dev and Vercel production
+// CORS configuration supporting local Vite dev, Vercel production, and preview URLs
 const allowedOrigins = [
   'http://localhost:5173',
   'https://beyondcgpa.vercel.app',
   'http://127.0.0.1:5173'
 ];
 
-if (config.CLIENT_URL && !allowedOrigins.includes(config.CLIENT_URL)) {
-  allowedOrigins.push(config.CLIENT_URL);
+if (config.CLIENT_URL) {
+  const customOrigins = config.CLIENT_URL.split(',').map(url => url.trim().replace(/\/+$/, '')).filter(Boolean);
+  customOrigins.forEach(url => {
+    if (!allowedOrigins.includes(url)) {
+      allowedOrigins.push(url);
+    }
+  });
 }
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser requests (curl, server-to-server) or listed origins
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow non-browser requests (curl, server-to-server) or listed origins or any Vercel domain
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app')
+    ) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS policy violation: origin ${origin} is not allowed`));
+      callback(null, false);
     }
   },
   credentials: false, // Implementation uses Bearer tokens in Authorization header, not cookies
