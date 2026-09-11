@@ -203,15 +203,15 @@ const initialPreparationTopics = [
       {
         title: 'Build Search Filter with Debounced State',
         difficulty: 'Medium',
-        platform: 'Frontend Challenge',
-        url: '',
+        platform: 'React Lab',
+        url: 'https://react.dev/learn/managing-state',
         description: 'Implement a real-time search component with debounced queries and optimistic UI updates.'
       },
       {
         title: 'Design Infinite Scroll List with Virtualization',
         difficulty: 'Hard',
-        platform: 'Frontend Challenge',
-        url: '',
+        platform: 'TanStack Lab',
+        url: 'https://tanstack.com/virtual/latest',
         description: 'Render 10,000 items smoothly without degrading frame rate or DOM node count.'
       }
     ],
@@ -245,8 +245,8 @@ const initialPreparationTopics = [
       {
         title: 'Audit and Eliminate Unused CSS/JS Bundles',
         difficulty: 'Medium',
-        platform: 'Performance Lab',
-        url: '',
+        platform: 'Web.dev Lab',
+        url: 'https://web.dev/articles/reduce-javascript-payloads-with-code-splitting',
         description: 'Achieve a 90+ Lighthouse score by tree-shaking and dynamic import code-splitting.'
       }
     ],
@@ -282,8 +282,8 @@ const initialPreparationTopics = [
       {
         title: 'Build Authenticated CRUD Micro-service',
         difficulty: 'Medium',
-        platform: 'GitHub',
-        url: '',
+        platform: 'Node Best Practices',
+        url: 'https://github.com/goldbergyoni/nodebestpractices',
         description: 'Create an Express REST API with JWT verification middleware and Mongoose models.'
       }
     ],
@@ -317,8 +317,8 @@ const initialPreparationTopics = [
       {
         title: 'Design Async Order Processing Queue',
         difficulty: 'Hard',
-        platform: 'Backend Challenge',
-        url: '',
+        platform: 'Confluent Event Lab',
+        url: 'https://github.com/confluentinc/examples',
         description: 'Design a resilient payment and order fulfillment service decoupled via message queue.'
       }
     ],
@@ -353,8 +353,8 @@ const initialPreparationTopics = [
       {
         title: 'Build End-to-End Classification Pipeline',
         difficulty: 'Medium',
-        platform: 'Kaggle',
-        url: '',
+        platform: 'Scikit-Learn Lab',
+        url: 'https://scikit-learn.org/stable/modules/compose.html',
         description: 'Train a tabular classifier with Scikit-learn Pipeline and hyperparameter grid search.'
       }
     ],
@@ -387,8 +387,8 @@ const initialPreparationTopics = [
       {
         title: 'Build RAG Document Search Assistant',
         difficulty: 'Hard',
-        platform: 'AI Project',
-        url: '',
+        platform: 'LangChain AI Lab',
+        url: 'https://github.com/langchain-ai/rag-from-scratch',
         description: 'Ingest PDF documents into vector store and generate grounded citations with LLM.'
       }
     ],
@@ -423,8 +423,8 @@ const initialPreparationTopics = [
       {
         title: 'Containerize Multi-tier Application with Docker Compose',
         difficulty: 'Medium',
-        platform: 'DevOps Lab',
-        url: '',
+        platform: 'Docker Lab',
+        url: 'https://docs.docker.com/compose/gettingstarted/',
         description: 'Compose frontend, Express API, and Postgres with healthchecks and persistent volumes.'
       }
     ],
@@ -457,8 +457,8 @@ const initialPreparationTopics = [
       {
         title: 'Build Automated CI/CD Pipeline with Deployment Gate',
         difficulty: 'Hard',
-        platform: 'DevOps Project',
-        url: '',
+        platform: 'GitHub Actions Lab',
+        url: 'https://docs.github.com/en/actions/quickstart',
         description: 'Set up GitHub Actions to run unit tests, build Docker image, and deploy to staging.'
       }
     ],
@@ -493,8 +493,8 @@ const initialPreparationTopics = [
       {
         title: 'Optimize Slow Aggregation Query',
         difficulty: 'Medium',
-        platform: 'MongoDB / PostgreSQL',
-        url: '',
+        platform: 'SQL Index Lab',
+        url: 'https://use-the-index-luke.com/sql/explain-plan',
         description: 'Analyze an EXPLAIN output and add compound index to eliminate COLLSCAN.'
       }
     ],
@@ -529,8 +529,8 @@ const initialPreparationTopics = [
       {
         title: 'Design Scalable URL Shortener with Redis Cache',
         difficulty: 'Medium',
-        platform: 'System Design',
-        url: '',
+        platform: 'System Design Primer',
+        url: 'https://github.com/donnemartin/system-design-primer#design-pastebin',
         description: 'Design TinyURL handling 100M daily clicks with 99.9% read-through cache hit rate.'
       }
     ],
@@ -563,11 +563,11 @@ const initialPreparationTopics = [
     ],
     practiceQuestions: [
       {
-        title: 'Producer-Consumer Problem',
+        title: 'Print in Order (Concurrency Problem)',
         difficulty: 'Medium',
-        platform: 'Core CS',
-        url: '',
-        description: 'Implement bounded buffer synchronization using semaphores.'
+        platform: 'LeetCode',
+        url: 'https://leetcode.com/problems/print-in-order/',
+        description: 'Implement thread synchronization using mutexes/semaphores.'
       }
     ],
     actionableChecklist: [
@@ -601,8 +601,8 @@ const initialPreparationTopics = [
       {
         title: 'Design Parking Lot System (OOP)',
         difficulty: 'Medium',
-        platform: 'Design Round',
-        url: '',
+        platform: 'Refactoring Guru',
+        url: 'https://refactoring.guru/design-patterns/catalog',
         description: 'Design extensible classes, interfaces, and spot allocation strategy.'
       }
     ],
@@ -633,8 +633,8 @@ const initialPreparationTopics = [
       {
         title: 'Deploy Production Web App with Custom Domain & SSL',
         difficulty: 'Hard',
-        platform: 'Portfolio',
-        url: '',
+        platform: 'Fullstack Project Showcase',
+        url: 'https://github.com/topics/fullstack-project',
         description: 'Ship a fullstack application with automated tests and monitoring.'
       }
     ],
@@ -664,8 +664,8 @@ const initialPreparationTopics = [
       {
         title: 'Ship High-Performance Interactive Analytics Dashboard',
         difficulty: 'Hard',
-        platform: 'Portfolio',
-        url: '',
+        platform: 'React Capstone Showcase',
+        url: 'https://github.com/topics/react-dashboard',
         description: 'Create a client-side analytics UI with interactive SVG charts and theme toggling.'
       }
     ],

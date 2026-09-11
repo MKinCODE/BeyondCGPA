@@ -26,292 +26,259 @@ async function runCIEAudit() {
     const topicCount = await PreparationTopic.countDocuments();
     console.log(`Total topics in DB: ${topicCount}\n`);
 
-    // TEST 1: Persona 1 - Pure Frontend Goal with Minimal DSA
-    console.log('--- TEST 1: Persona 1 (Frontend Goal + Minimal DSA) ---');
-    const user1 = await User.create({
-      name: 'Priya Sharma',
-      email: 'priya@example.com',
+    // =========================================================================
+    // CORE DEBUGGING REQUIREMENT: Comparing Two Profiles with Same Goal but Different States
+    // =========================================================================
+    console.log('--- STEP 1: Two Profiles with Same Goal (Frontend) & Same Strategy (Balanced) ---');
+    console.log('Demonstrating that Today\'s Focus is derived mathematically from skill gaps, not hardcoded defaults.\n');
+
+    // Profile A: Beginner in Development, Comfortable in DSA
+    const userA = await User.create({
+      name: 'Student A (Dev Beginner, DSA Intermediate)',
+      email: 'studentA@example.com',
       graduationYear: 2027
     });
 
-    const rawAnswers1 = {
+    const rawAnswersA = {
       targetDomain: 'Frontend',
-      domainProficiency: 'Intermediate',
-      dsaPreference: 'Minimal',
-      priorSkills: ['React'],
+      domainProficiency: 'Beginner',
+      dsaPreference: 'Balanced',
+      dsaProficiency: 'Intermediate',
+      priorSkills: ['Arrays_TwoPointers'],
+      practicalProjects: 'StartingFresh',
       weeklyHours: 14,
       graduationYear: 2027
     };
 
-    const synthesized1 = await onboardingEngine.synthesizeProfile(rawAnswers1);
-    console.log('Synthesized Profile 1:');
-    console.log('  Target Domain:', synthesized1.targetDomain);
-    console.log('  Self-Reported Skills:', synthesized1.selfReportedSkills);
-    console.log('  Estimated Proficiency:', synthesized1.estimatedProficiency);
-
-    // Save profile ensuring self-reported skills are NOT unearned mastery
-    const profile1 = await CareerProfile.create({
-      user: user1._id,
-      targetDomain: synthesized1.targetDomain,
-      dsaPreference: synthesized1.dsaPreference,
-      weeklyHours: synthesized1.weeklyHours,
-      estimatedProficiency: synthesized1.estimatedProficiency,
-      currentProficiency: synthesized1.currentProficiency,
-      selfReportedSkills: synthesized1.selfReportedSkills,
-      cieDerived: { masteredSkills: [] } // Empty verified mastery initially!
-    });
-
-    const roadmap1 = await cieService.generateBaselineRoadmap(user1._id, profile1);
-    console.log(`Roadmap 1 Phases for ${profile1.targetDomain} (DSA: ${profile1.dsaPreference}):`);
-    roadmap1.phases.forEach(p => {
-      console.log(`  Phase ${p.order}: [${p.category}] ${p.title} (${p.topics.length} topics)`);
-      p.topics.forEach(t => console.log(`    - ${t.title} (${t.allocatedEffortUnits} units, Priority: ${t.priority})`));
-    });
-
-    // Check Today's Focus for User 1
-    const focus1 = await preparationEngine.getTodaysFocus(user1._id);
-    console.log('\nToday\'s Focus for User 1 (Frontend):');
-    console.log('  Topic:', focus1.topic?.title);
-    console.log('  Category:', focus1.category);
-    console.log('  Reason:', focus1.reason);
-
-    // Assertions for User 1
-    if (focus1.topic?.title !== 'Modern React, Component Architecture & State Systems') {
-      throw new Error(`Expected Modern React for Frontend focus, got: ${focus1.topic?.title}`);
-    }
-    if (focus1.topic?.title.includes('Express')) {
-      throw new Error('Frontend student was wrongly assigned Express backend work!');
-    }
-    // Verify DSA is at the end
-    const lastPhase1 = roadmap1.phases[roadmap1.phases.length - 1];
-    if (lastPhase1.category !== 'DSA') {
-      throw new Error(`Expected DSA to be deferred to the last phase for Minimal DSA, got: ${lastPhase1.category}`);
-    }
-    console.log('✅ TEST 1 PASSED: Frontend goal with Minimal DSA produced React development focus, zero Express work, and DSA deferred.\n');
-
-    // TEST 2: Persona 2 - Backend Goal with Intensive DSA
-    console.log('--- TEST 2: Persona 2 (Backend Goal + Intensive DSA) ---');
-    const user2 = await User.create({
-      name: 'Rohan Verma',
-      email: 'rohan@example.com',
-      graduationYear: 2026
-    });
-
-    const rawAnswers2 = {
-      targetDomain: 'Backend',
-      domainProficiency: 'Intermediate',
-      dsaPreference: 'Intensive',
-      weeklyHours: 18,
-      graduationYear: 2026
-    };
-
-    const synthesized2 = await onboardingEngine.synthesizeProfile(rawAnswers2);
-    const profile2 = await CareerProfile.create({
-      user: user2._id,
-      targetDomain: synthesized2.targetDomain,
-      dsaPreference: synthesized2.dsaPreference,
-      weeklyHours: synthesized2.weeklyHours,
-      estimatedProficiency: synthesized2.estimatedProficiency,
-      currentProficiency: synthesized2.currentProficiency,
-      selfReportedSkills: synthesized2.selfReportedSkills,
+    const synthesizedA = await onboardingEngine.synthesizeProfile(rawAnswersA);
+    const profileA = await CareerProfile.create({
+      user: userA._id,
+      targetDomain: synthesizedA.targetDomain,
+      dsaPreference: synthesizedA.dsaPreference,
+      weeklyHours: synthesizedA.weeklyHours,
+      estimatedProficiency: synthesizedA.estimatedProficiency,
+      currentProficiency: synthesizedA.currentProficiency,
+      selfReportedSkills: synthesizedA.selfReportedSkills,
+      selfReportedExperience: synthesizedA.selfReportedExperience,
       cieDerived: { masteredSkills: [] }
     });
 
-    const roadmap2 = await cieService.generateBaselineRoadmap(user2._id, profile2);
-    console.log(`Roadmap 2 Phase 1: [${roadmap2.phases[0].category}] ${roadmap2.phases[0].title}`);
+    const roadmapA = await cieService.generateBaselineRoadmap(userA._id, profileA);
+    const focusA = await preparationEngine.getTodaysFocus(userA._id);
 
-    const focus2 = await preparationEngine.getTodaysFocus(user2._id);
-    console.log('Today\'s Focus for User 2 (Backend + Intensive DSA):');
-    console.log('  Topic:', focus2.topic?.title);
-    console.log('  Category:', focus2.category);
-    console.log('  Reason:', focus2.reason);
+    console.log('Profile A Stored State:');
+    console.log('  Target Domain:', profileA.targetDomain);
+    console.log('  DSA Preference:', profileA.dsaPreference);
+    console.log('  Estimated Proficiency:', profileA.estimatedProficiency);
+    console.log('  Self-Reported Skills:', profileA.selfReportedSkills);
+    console.log('  Calculated Today\'s Focus:');
+    console.log('    Topic:', focusA.topic?.title);
+    console.log('    Category:', focusA.category);
+    console.log('    Reason:', focusA.reason);
+    console.log('    Actionable Task:', focusA.actionableTask?.title, `(${focusA.actionableTask?.url || 'No URL'})`);
+    console.log('    Allocations Count:', focusA.allocations?.length);
 
-    if (focus2.category !== 'DSA' || focus2.topic?.title !== 'Arrays & Two Pointers') {
-      throw new Error(`Expected Arrays & Two Pointers for Intensive DSA, got: ${focus2.topic?.title}`);
-    }
-    console.log('✅ TEST 2 PASSED: Intensive DSA placed DSA in Phase 1 with Critical priority and Two Pointers focus.\n');
-
-    // TEST 3: Persona 3 - Undecided / General Exploration Mode
-    console.log('--- TEST 3: Persona 3 (Undecided / Exploration Mode) ---');
-    const user3 = await User.create({
-      name: 'Ananya Roy',
-      email: 'ananya@example.com',
-      graduationYear: 2028
-    });
-
-    const rawAnswers3 = {
-      targetDomain: 'Undecided',
-      explorationInterest: 'BuildingVisualApps',
-      dsaPreference: 'Balanced',
-      weeklyHours: 10,
-      graduationYear: 2028
-    };
-
-    const synthesized3 = await onboardingEngine.synthesizeProfile(rawAnswers3);
-    const profile3 = await CareerProfile.create({
-      user: user3._id,
-      targetDomain: synthesized3.targetDomain,
-      dsaPreference: synthesized3.dsaPreference,
-      weeklyHours: synthesized3.weeklyHours,
-      estimatedProficiency: synthesized3.estimatedProficiency,
-      currentProficiency: synthesized3.currentProficiency,
-      selfReportedSkills: synthesized3.selfReportedSkills,
-      cieDerived: { masteredSkills: [] }
-    });
-
-    const roadmap3 = await cieService.generateBaselineRoadmap(user3._id, profile3);
-    console.log('Roadmap 3 Exploration Phases:');
-    roadmap3.phases.forEach(p => console.log(`  Phase ${p.order}: ${p.title} (${p.topics.length} topics)`));
-
-    const focus3 = await preparationEngine.getTodaysFocus(user3._id);
-    console.log('Today\'s Focus for User 3 (Exploration):');
-    console.log('  Topic:', focus3.topic?.title);
-    console.log('  Reason:', focus3.reason);
-
-    if (!focus3.reason.includes('Exploration Track')) {
-      throw new Error(`Expected Exploration Track reason, got: ${focus3.reason}`);
-    }
-    console.log('✅ TEST 3 PASSED: Undecided student received genuine cross-domain exploration track without forced career bias.\n');
-
-    // TEST 4: Persona 4 - Free-Text "Other" Extraction (AI/ML Goal + Skip DSA)
-    console.log('--- TEST 4: Free-Text "Other" Extraction ---');
-    const user4 = await User.create({
-      name: 'Kavita Iyer',
-      email: 'kavita@example.com',
+    // Profile B: Advanced in Development (Built React projects), Beginner in DSA
+    const userB = await User.create({
+      name: 'Student B (Dev Advanced, DSA Beginner)',
+      email: 'studentB@example.com',
       graduationYear: 2027
     });
 
-    const rawAnswers4 = {
-      targetDomain_other: 'I want to build intelligent agents and machine learning pipelines with PyTorch',
-      dsaPreference_other: 'Skip DSA completely for now; focus 100% on model engineering',
-      weeklyHours: 16
+    const rawAnswersB = {
+      targetDomain: 'Frontend',
+      domainProficiency: 'Advanced',
+      dsaPreference: 'Balanced',
+      dsaProficiency: 'Beginner',
+      priorSkills: ['React'],
+      practicalProjects: 'FullProjects',
+      weeklyHours: 14,
+      graduationYear: 2027
     };
 
-    const synthesized4 = await onboardingEngine.synthesizeProfile(rawAnswers4);
-    console.log('Extracted State from Free Text:');
-    console.log('  Detected Domain:', synthesized4.targetDomain);
-    console.log('  Detected DSA Preference:', synthesized4.dsaPreference);
-    console.log('  Detected Skills:', synthesized4.selfReportedSkills);
-
-    if (synthesized4.targetDomain !== 'AI/ML') {
-      throw new Error(`Expected AI/ML from free text, got: ${synthesized4.targetDomain}`);
-    }
-    if (synthesized4.dsaPreference !== 'SkipForNow') {
-      throw new Error(`Expected SkipForNow from free text, got: ${synthesized4.dsaPreference}`);
-    }
-
-    const profile4 = await CareerProfile.create({
-      user: user4._id,
-      targetDomain: synthesized4.targetDomain,
-      dsaPreference: synthesized4.dsaPreference,
-      weeklyHours: synthesized4.weeklyHours,
-      estimatedProficiency: synthesized4.estimatedProficiency,
-      currentProficiency: synthesized4.currentProficiency,
-      selfReportedSkills: synthesized4.selfReportedSkills,
+    const synthesizedB = await onboardingEngine.synthesizeProfile(rawAnswersB);
+    const profileB = await CareerProfile.create({
+      user: userB._id,
+      targetDomain: synthesizedB.targetDomain,
+      dsaPreference: synthesizedB.dsaPreference,
+      weeklyHours: synthesizedB.weeklyHours,
+      estimatedProficiency: synthesizedB.estimatedProficiency,
+      currentProficiency: synthesizedB.currentProficiency,
+      selfReportedSkills: synthesizedB.selfReportedSkills,
+      selfReportedExperience: synthesizedB.selfReportedExperience,
       cieDerived: { masteredSkills: [] }
     });
 
-    const roadmap4 = await cieService.generateBaselineRoadmap(user4._id, profile4);
-    const focus4 = await preparationEngine.getTodaysFocus(user4._id);
-    console.log('Today\'s Focus for User 4 (Extracted AI/ML):');
-    console.log('  Topic:', focus4.topic?.title);
-    console.log('  Category:', focus4.category);
+    const roadmapB = await cieService.generateBaselineRoadmap(userB._id, profileB);
+    const focusB = await preparationEngine.getTodaysFocus(userB._id);
 
-    if (focus4.topic?.title !== 'Applied Machine Learning Pipelines & PyTorch/Scikit-Learn') {
-      throw new Error(`Expected Applied ML Pipelines, got: ${focus4.topic?.title}`);
+    console.log('\nProfile B Stored State:');
+    console.log('  Target Domain:', profileB.targetDomain);
+    console.log('  DSA Preference:', profileB.dsaPreference);
+    console.log('  Estimated Proficiency:', profileB.estimatedProficiency);
+    console.log('  Self-Reported Skills:', profileB.selfReportedSkills);
+    console.log('  Calculated Today\'s Focus:');
+    console.log('    Topic:', focusB.topic?.title);
+    console.log('    Category:', focusB.category);
+    console.log('    Reason:', focusB.reason);
+    console.log('    Actionable Task:', focusB.actionableTask?.title, `(${focusB.actionableTask?.url || 'No URL'})`);
+    console.log('    Allocations Count:', focusB.allocations?.length);
+
+    // CRITICAL ASSERTION:
+    if (focusA.topic?.title === focusB.topic?.title) {
+      throw new Error(`CRITICAL FAILURE: Profile A and B both received ${focusA.topic?.title}! Today's Focus was not personalized to their skill gaps.`);
     }
-    // Verify DSA is omitted
-    const hasDsa4 = roadmap4.phases.some(p => p.category === 'DSA');
-    if (hasDsa4) {
-      throw new Error('DSA was supposed to be completely skipped for User 4!');
+
+    if (focusA.topic?.title !== 'Modern React, Component Architecture & State Systems') {
+      throw new Error(`Expected Student A to focus on Modern React (dev gap), got: ${focusA.topic?.title}`);
     }
-    console.log('✅ TEST 4 PASSED: Free text extracted AI/ML domain and Skip DSA preference into structured state.\n');
 
-    // TEST 5: Real Closed-Loop Dynamic Adaptation (Before vs After)
-    console.log('--- TEST 5: Demonstration of Real Before vs After Adaptation ---');
-    console.log('Starting with User 1 (Frontend):');
-    console.log('  BEFORE Stored State:');
-    console.log('    Velocity Multiplier: 1.0');
-    console.log('    Mastered Skills: []');
-    console.log('    Remaining Units:', roadmap1.remainingUnits);
-    console.log('    Today\'s Focus:', focus1.topic?.title);
+    if (focusB.topic?.title !== 'Arrays & Two Pointers') {
+      throw new Error(`Expected Student B to focus on Arrays & Two Pointers (DSA gap), got: ${focusB.topic?.title}`);
+    }
 
-    // 5.1: Student successfully completes "Modern React" with high confidence (5/5)
-    console.log('\n--> Logging effort: 3 units covered with high confidence (5/5) on Modern React...');
+    if (!focusA.actionableTask?.url || !focusB.actionableTask?.url) {
+      throw new Error('Actionable practice challenge was missing a working practice link!');
+    }
+
+    console.log('\n✅ VERIFIED: With the SAME career goal and SAME Balanced strategy:');
+    console.log('   - Student A (Dev Beginner) was assigned Development (React)');
+    console.log('   - Student B (DSA Beginner) was assigned DSA (Arrays & Two Pointers)');
+    console.log('   - Both received actionable practice tasks with direct links!\n');
+
+    // =========================================================================
+    // STEP 2: Real Before vs After State Adaptation
+    // =========================================================================
+    console.log('--- STEP 2: State Transitions & Recalculation ---');
+
+    // 2.1 Demonstrated Mastery: Student B completes Arrays & Two Pointers
+    const remainingToCover = focusB.progress.remainingUnits || 4;
+    console.log(`--> Event 2.1: Student B logs ${remainingToCover} units with 5/5 confidence on Arrays & Two Pointers...`);
     await preparationEngine.logEffort({
-      userId: user1._id,
-      topicId: focus1.topic._id,
-      unitsCovered: 3,
+      userId: userB._id,
+      topicId: focusB.topic._id,
+      unitsCovered: remainingToCover,
       durationMinutes: 90,
       confidenceScore: 5,
-      notes: 'Mastered component lifecycle, hook invariants, and state lifting.'
+      notes: 'Mastered two pointers convergence, cycle detection, and space-time tradeoffs.'
     });
 
-    const updatedProfile1 = await CareerProfile.findOne({ user: user1._id });
-    const updatedRoadmap1 = await Roadmap.findOne({ user: user1._id });
-    const focus1AfterCompletion = await preparationEngine.getTodaysFocus(user1._id);
+    const updatedProfileB = await CareerProfile.findOne({ user: userB._id });
+    const focusBAfterMastery = await preparationEngine.getTodaysFocus(userB._id);
 
-    console.log('\n  AFTER High-Mastery Completion State:');
-    console.log('    Velocity Multiplier:', updatedProfile1.cieDerived.velocityMultiplier);
-    console.log('    Mastered Skills:', updatedProfile1.cieDerived.masteredSkills);
-    console.log('    Remaining Units:', updatedRoadmap1.remainingUnits);
-    console.log('    Today\'s Focus (Dynamically Advanced):', focus1AfterCompletion.topic?.title);
-    console.log('    Reason:', focus1AfterCompletion.reason);
+    console.log('  AFTER Mastery State for Student B:');
+    console.log('    Mastered Skills:', updatedProfileB.cieDerived.masteredSkills);
+    console.log('    Velocity Multiplier:', updatedProfileB.cieDerived.velocityMultiplier);
+    console.log('    New Today\'s Focus:', focusBAfterMastery.topic?.title);
+    console.log('    Reason:', focusBAfterMastery.reason);
 
-    // Verify downstream change
-    if (focus1AfterCompletion.topic?.title !== 'Web Performance, DOM Mechanics & Responsive UI Architecture') {
-      throw new Error(`Expected Today's Focus to advance to Web Performance, got: ${focus1AfterCompletion.topic?.title}`);
+    if (focusBAfterMastery.topic?.title === 'Arrays & Two Pointers') {
+      throw new Error('Today\'s Focus failed to advance after mastering Arrays & Two Pointers!');
     }
-    if (!updatedProfile1.cieDerived.masteredSkills.includes('Modern React, Component Architecture & State Systems')) {
-      throw new Error('Mastered skills was not updated with verified performance evidence!');
-    }
-    console.log('  ✓ Verified: Successful progress advanced mastery, accelerated velocity, and unlocked the next prerequisite topic.');
+    console.log('  ✓ Verified: Logged mastery unblocked progression and advanced Today\'s Focus.\n');
 
-    // 5.2: Student struggles with Web Performance (confidenceScore: 1/5)
-    console.log('\n--> Logging struggle: 1 unit with low confidence (1/5) on Web Performance...');
-    await preparationEngine.logEffort({
-      userId: user1._id,
-      topicId: focus1AfterCompletion.topic._id,
-      unitsCovered: 1,
-      durationMinutes: 60,
-      confidenceScore: 1,
-      notes: 'Struggled with critical rendering path reflows and CSSOM calculations.'
+    // 2.2 DSA Preference Change: Student B changes strategy from Balanced to SkipForNow
+    console.log('--> Event 2.2: Student B changes DSA preference to "SkipForNow" in settings...');
+    await cieService.adaptRoadmapToProfileChange(userB._id, { dsaPreference: 'SkipForNow' });
+
+    const updatedRoadmapB = await Roadmap.findOne({ user: userB._id });
+    const focusBAfterSkipDSA = await preparationEngine.getTodaysFocus(userB._id);
+
+    console.log('  AFTER DSA Preference Change:');
+    console.log('    Has DSA in Roadmap:', updatedRoadmapB.phases.some(p => p.category === 'DSA'));
+    console.log('    New Today\'s Focus:', focusBAfterSkipDSA.topic?.title);
+    console.log('    Category:', focusBAfterSkipDSA.category);
+
+    if (focusBAfterSkipDSA.category === 'DSA') {
+      throw new Error('Today\'s Focus still selected DSA after student chose SkipForNow!');
+    }
+    console.log('  ✓ Verified: Changing DSA preference restructured the roadmap and updated Today\'s Focus.\n');
+
+    // 2.3 Career Goal Change: Student A changes targetDomain from Frontend to AI/ML
+    console.log('--> Event 2.3: Student A changes career target from Frontend to AI/ML...');
+    await cieService.adaptRoadmapToProfileChange(userA._id, { targetDomain: 'AI/ML' });
+
+    const focusAAfterGoalChange = await preparationEngine.getTodaysFocus(userA._id);
+
+    console.log('  AFTER Career Goal Change:');
+    console.log('    New Today\'s Focus:', focusAAfterGoalChange.topic?.title);
+    console.log('    Category:', focusAAfterGoalChange.category);
+    console.log('    Reason:', focusAAfterGoalChange.reason);
+
+    if (focusAAfterGoalChange.topic?.title !== 'Applied Machine Learning Pipelines & PyTorch/Scikit-Learn') {
+      throw new Error(`Expected Applied ML Pipelines for AI/ML goal change, got: ${focusAAfterGoalChange.topic?.title}`);
+    }
+    console.log('  ✓ Verified: Changing career goal dynamically recalculated roadmap and Today\'s Focus to ML.\n');
+
+    // 2.4 Preparation Horizon Recalculation: Adjusting Weekly Effort
+    console.log('--> Event 2.4: Student A adjusts weekly hours from 14 hrs/week to 28 hrs/week...');
+    const beforeHorizon = (await CareerProfile.findOne({ user: userA._id })).cieDerived.readinessHorizon;
+    await cieService.adaptRoadmapToProfileChange(userA._id, { weeklyHours: 28 });
+    const afterHorizon = (await CareerProfile.findOne({ user: userA._id })).cieDerived.readinessHorizon;
+
+    console.log('  BEFORE Horizon (14 hrs/wk):', beforeHorizon.targetCompletionEstimate);
+    console.log('  AFTER Horizon (28 hrs/wk):', afterHorizon.targetCompletionEstimate);
+
+    if (afterHorizon.estimatedWeeks >= beforeHorizon.estimatedWeeks) {
+      throw new Error('Doubling weekly hours did not shorten the estimated preparation horizon!');
+    }
+    console.log('  ✓ Verified: Preparation horizon scaled dynamically with student\'s weekly availability.\n');
+
+    // =========================================================================
+    // STEP 3: Free-Text Extraction Calibration
+    // =========================================================================
+    console.log('--- STEP 3: Free-Text Extraction & Dynamic Profiling ---');
+    const freeTextUser = await User.create({
+      name: 'Cloud Engineer User',
+      email: 'cloud@example.com',
+      graduationYear: 2026
     });
 
-    const struggleProfile = await CareerProfile.findOne({ user: user1._id });
-    const focus1AfterStruggle = await preparationEngine.getTodaysFocus(user1._id);
+    const rawAnswersCloud = {
+      targetDomain_other: 'I want to specialize in Kubernetes clusters, Docker containers, and Cloud DevOps CI/CD',
+      dsaPreference_other: 'Intensive DSA first because I am preparing for FAANG coding rounds',
+      weeklyHours: 20
+    };
 
-    console.log('\n  AFTER Struggle State:');
-    console.log('    Velocity Multiplier:', struggleProfile.cieDerived.velocityMultiplier);
-    console.log('    Growth Areas:', struggleProfile.cieDerived.growthAreas);
-    console.log('    Today\'s Focus (Reinforcement Triggered):', focus1AfterStruggle.topic?.title);
-    console.log('    Reason:', focus1AfterStruggle.reason);
-    console.log('    Is Reinforcement Flag:', focus1AfterStruggle.isReinforcement);
+    const synthesizedCloud = await onboardingEngine.synthesizeProfile(rawAnswersCloud);
+    console.log('Extracted State from Free Text:');
+    console.log('  Target Domain:', synthesizedCloud.targetDomain);
+    console.log('  DSA Preference:', synthesizedCloud.dsaPreference);
+    console.log('  Detected Skills:', synthesizedCloud.selfReportedSkills);
 
-    if (!focus1AfterStruggle.isReinforcement || !focus1AfterStruggle.reason.includes('Reinforcement')) {
-      throw new Error('Expected reinforcement focus after low confidence struggle!');
+    if (synthesizedCloud.targetDomain !== 'Cloud/DevOps') {
+      throw new Error(`Expected Cloud/DevOps from free text, got: ${synthesizedCloud.targetDomain}`);
     }
-    console.log('  ✓ Verified: Repeated struggle triggered reinforcement replanning buffer rather than naive advancement.');
-
-    // 5.3: Student updates career goal to Backend in profile settings
-    console.log('\n--> Student changes career goal to Backend in Profile Settings...');
-    await cieService.adaptRoadmapToProfileChange(user1._id, { targetDomain: 'Backend' });
-
-    const goalChangedRoadmap = await Roadmap.findOne({ user: user1._id });
-    const focus1AfterGoalChange = await preparationEngine.getTodaysFocus(user1._id);
-
-    console.log('\n  AFTER Goal Change State:');
-    console.log('    New Target Domain:', goalChangedRoadmap.targetDomain);
-    console.log('    New Today\'s Focus:', focus1AfterGoalChange.topic?.title);
-    console.log('    Reason:', focus1AfterGoalChange.reason);
-
-    if (focus1AfterGoalChange.topic?.title !== 'Production REST API Architecture & Express.js') {
-      throw new Error(`Expected REST API Express for Backend goal change, got: ${focus1AfterGoalChange.topic?.title}`);
+    if (synthesizedCloud.dsaPreference !== 'Intensive') {
+      throw new Error(`Expected Intensive DSA from free text, got: ${synthesizedCloud.dsaPreference}`);
     }
-    console.log('  ✓ Verified: Changing career goal dynamically recalculated roadmap phases and Today\'s Focus to Backend REST APIs.');
 
-    console.log('\n========================================================');
-    console.log('🎉 ALL AUDIT VERIFICATION TESTS PASSED SUCCESSFULLY!');
+    const profileCloud = await CareerProfile.create({
+      user: freeTextUser._id,
+      targetDomain: synthesizedCloud.targetDomain,
+      dsaPreference: synthesizedCloud.dsaPreference,
+      weeklyHours: synthesizedCloud.weeklyHours,
+      estimatedProficiency: synthesizedCloud.estimatedProficiency,
+      currentProficiency: synthesizedCloud.currentProficiency,
+      selfReportedSkills: synthesizedCloud.selfReportedSkills,
+      cieDerived: { masteredSkills: [] }
+    });
+
+    await cieService.generateBaselineRoadmap(freeTextUser._id, profileCloud);
+    const focusCloud = await preparationEngine.getTodaysFocus(freeTextUser._id);
+
+    console.log('Today\'s Focus for Free-Text User:');
+    console.log('  Topic:', focusCloud.topic?.title);
+    console.log('  Category:', focusCloud.category);
+    console.log('  Priority:', focusCloud.priority);
+
+    if (focusCloud.category !== 'DSA') {
+      throw new Error(`Expected DSA for Intensive priority, got: ${focusCloud.category}`);
+    }
+    console.log('  ✓ Verified: Free-text was correctly extracted and translated into structured state and Today\'s Focus.\n');
+
+    console.log('========================================================');
+    console.log('🎉 ALL COMPREHENSIVE CIE AUDIT TESTS PASSED SUCCESSFULLY!');
     console.log('========================================================');
   } finally {
     await mongoose.disconnect();

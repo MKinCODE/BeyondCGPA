@@ -11,8 +11,8 @@ const careerProfileSchema = new mongoose.Schema(
     // Structured student inputs
     targetDomain: {
       type: String,
-      enum: ['Fullstack', 'Backend', 'Frontend', 'AI/ML', 'Cloud/DevOps', 'DataEngineering', 'Undecided'],
-      default: 'Fullstack'
+      default: 'Fullstack',
+      trim: true
     },
     targetCompaniesCategory: {
       type: [String],

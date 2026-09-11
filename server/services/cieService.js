@@ -11,19 +11,19 @@ class CIEService {
     let baseOrder;
 
     if (targetDomain === 'Frontend') {
-      baseOrder = ['Development', 'Projects', 'OOP', 'DSA', 'OS', 'InterviewPrep'];
+      baseOrder = ['Development', 'DSA', 'Projects', 'OOP', 'OS', 'InterviewPrep'];
     } else if (targetDomain === 'Backend') {
-      baseOrder = ['Development', 'DBMS', 'SystemDesign', 'OS', 'Projects', 'DSA', 'OOP', 'InterviewPrep'];
+      baseOrder = ['Development', 'DSA', 'DBMS', 'SystemDesign', 'OS', 'Projects', 'OOP', 'InterviewPrep'];
     } else if (targetDomain === 'AI/ML') {
-      baseOrder = ['Development', 'Projects', 'DBMS', 'DSA', 'OOP', 'InterviewPrep'];
+      baseOrder = ['Development', 'DSA', 'Projects', 'DBMS', 'OOP', 'InterviewPrep'];
     } else if (targetDomain === 'Cloud/DevOps') {
-      baseOrder = ['Development', 'OS', 'SystemDesign', 'Projects', 'DBMS', 'DSA', 'OOP', 'InterviewPrep'];
+      baseOrder = ['Development', 'DSA', 'OS', 'SystemDesign', 'Projects', 'DBMS', 'OOP', 'InterviewPrep'];
     } else if (targetDomain === 'Undecided') {
       // Exploration Mode: Cross-sampling discovery
       baseOrder = ['Development', 'DSA', 'DBMS', 'OS', 'Projects', 'OOP', 'InterviewPrep'];
     } else {
       // Fullstack or other default
-      baseOrder = ['Development', 'DBMS', 'SystemDesign', 'Projects', 'DSA', 'OS', 'OOP', 'InterviewPrep'];
+      baseOrder = ['Development', 'DSA', 'DBMS', 'SystemDesign', 'Projects', 'OS', 'OOP', 'InterviewPrep'];
     }
 
     // Adapt to explicit DSA preference:
@@ -208,7 +208,8 @@ class CIEService {
       totalUnits: totalAllocatedUnits,
       completedUnits: initialCompletedUnits,
       weeklyHours: weeklyHours || 14,
-      velocityMultiplier: 1.0
+      velocityMultiplier: 1.0,
+      phases
     });
 
     const pacingHealth = this.calculatePacingHealth(weeklyHours || 14, totalAllocatedUnits, initialCompletedUnits);
@@ -238,12 +239,33 @@ class CIEService {
   }
 
   /**
-   * Calculates realistic readiness horizon based on total remaining workload, weekly availability, and velocity.
+   * Calculates realistic readiness horizon based on total remaining workload, domain priorities, weekly availability, and velocity.
    */
-  calculateReadinessHorizon({ totalUnits, completedUnits, weeklyHours, velocityMultiplier = 1.0 }) {
+  calculateReadinessHorizon({ totalUnits, completedUnits, weeklyHours, velocityMultiplier = 1.0, phases = [] }) {
     const remainingUnits = Math.max(0, totalUnits - completedUnits);
-    const avgHoursPerUnit = 2.0;
-    const totalRemainingHours = (remainingUnits * avgHoursPerUnit) / Math.max(0.5, velocityMultiplier);
+
+    // Calculate priority-weighted remaining study hours based on phase & domain priorities
+    let totalRemainingHours = 0;
+    if (phases && phases.length > 0) {
+      let unweightedUnits = 0;
+      phases.forEach(phase => {
+        (phase.topics || []).forEach(item => {
+          const p = item.priority || 'Standard';
+          // Priority weights: Critical (2.2 hrs/unit), High (2.0 hrs/unit), Standard (1.8 hrs/unit), Optional (1.5 hrs/unit)
+          const factor = p === 'Critical' ? 2.2 : p === 'High' ? 2.0 : p === 'Standard' ? 1.8 : 1.5;
+          totalRemainingHours += (item.allocatedEffortUnits || 2) * factor;
+          unweightedUnits += (item.allocatedEffortUnits || 2);
+        });
+      });
+      // Scale by actual remaining fraction if partially completed
+      if (unweightedUnits > 0 && totalUnits > 0) {
+        totalRemainingHours = totalRemainingHours * (remainingUnits / totalUnits);
+      }
+    } else {
+      totalRemainingHours = remainingUnits * 2.0;
+    }
+
+    totalRemainingHours = totalRemainingHours / Math.max(0.5, velocityMultiplier);
     const effectiveWeeklyHours = Math.max(2, weeklyHours || 14);
 
     const estimatedWeeks = Math.max(1, Math.ceil(totalRemainingHours / effectiveWeeklyHours));
@@ -256,7 +278,7 @@ class CIEService {
       estimatedWeeks,
       targetCompletionEstimate: `~${months} months (${estimatedWeeks} weeks)`,
       currentPreparednessScore: preparednessScore,
-      rationale: `Based on ${remainingUnits} remaining units at ${effectiveWeeklyHours} hrs/week (${velocityMultiplier.toFixed(2)}x velocity).`
+      rationale: `Calculated from ${remainingUnits} remaining units across priority phases at ${effectiveWeeklyHours} hrs/week (${velocityMultiplier.toFixed(2)}x velocity).`
     };
   }
 
@@ -402,9 +424,13 @@ class CIEService {
     const profile = await CareerProfile.findOne({ user: userId });
     if (!profile) return null;
 
-    if (newProfileData.targetDomain && newProfileData.targetDomain !== profile.targetDomain) {
-      profile.targetDomain = newProfileData.targetDomain;
-      if (newProfileData.dsaPreference) profile.dsaPreference = newProfileData.dsaPreference;
+    const domainChanged = newProfileData.targetDomain && newProfileData.targetDomain !== profile.targetDomain;
+    const dsaChanged = newProfileData.dsaPreference && newProfileData.dsaPreference !== profile.dsaPreference;
+
+    if (domainChanged || dsaChanged) {
+      if (domainChanged) profile.targetDomain = newProfileData.targetDomain;
+      if (dsaChanged) profile.dsaPreference = newProfileData.dsaPreference;
+      if (newProfileData.weeklyHours) profile.weeklyHours = Number(newProfileData.weeklyHours);
       await profile.save();
 
       // Full roadmap restructuring for new domain/priorities
@@ -424,7 +450,8 @@ class CIEService {
       totalUnits: roadmap.totalAllocatedUnits,
       completedUnits: roadmap.completedUnits,
       weeklyHours: profile.weeklyHours,
-      velocityMultiplier: profile.cieDerived?.velocityMultiplier || 1.0
+      velocityMultiplier: profile.cieDerived?.velocityMultiplier || 1.0,
+      phases: roadmap.phases
     });
 
     const pacingHealth = this.calculatePacingHealth(

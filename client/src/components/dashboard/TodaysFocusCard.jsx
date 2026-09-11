@@ -32,7 +32,7 @@ export const TodaysFocusCard = () => {
     );
   }
 
-  const { topic, progress, reason, category } = todaysFocus;
+  const { topic, progress, reason, category, actionableTask, secondaryFocus, allocations } = todaysFocus;
   const remaining = progress?.remainingUnits ?? topic.allocatedEffortUnits;
   const completed = progress?.completedUnits ?? 0;
   const total = progress?.totalAllocatedUnits ?? topic.allocatedEffortUnits;
@@ -86,6 +86,60 @@ export const TodaysFocusCard = () => {
         <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed my-4">
           {topic.summary}
         </p>
+
+        {/* Actionable Practice Challenge */}
+        {actionableTask && (
+          <div className="my-4 p-4 rounded-2xl bg-[#E5F7F4]/50 border border-[#12B8A6]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#12B8A6] text-white">
+                  {actionableTask.platform || 'Practice Challenge'}
+                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                  {actionableTask.difficulty}
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-[#0B172A]">{actionableTask.title}</h4>
+              {actionableTask.description && (
+                <p className="text-xs text-[#64748B] leading-relaxed">{actionableTask.description}</p>
+              )}
+            </div>
+
+            {actionableTask.url && (
+              <a
+                href={actionableTask.url}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#087F73] hover:bg-[#066359] transition-all shadow-xs"
+              >
+                Open Practice Task <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Multi-Domain Daily Allocation */}
+        {allocations && allocations.length > 1 && (
+          <div className="my-3 p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[#0B172A]">Today's Multi-Domain Plan:</span>
+              <span className="text-[#64748B] text-[11px]">Parallel balanced preparation</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {allocations.map((alloc, idx) => (
+                <div key={idx} className="p-2.5 rounded-lg bg-white border border-[#E2E8F0] text-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-[#087F73] uppercase block">{alloc.type}</span>
+                    <span className="font-semibold text-[#0B172A]">{alloc.topicTitle}</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md shrink-0">
+                    {alloc.timeEstimateMinutes} min
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Workload Invariant Tracker */}
         <div className="bg-[#F8FAFC] p-3.5 rounded-xl flex items-center justify-between text-xs border border-[#E2E8F0]">

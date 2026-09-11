@@ -189,10 +189,6 @@ export const OnboardingWizard = () => {
     }
   };
 
-  const questionNum = currentQuestion?.questionNumber || (history.length + 1);
-  const maxLimit = 15;
-  const progressPercent = Math.min(100, Math.round((questionNum / 10) * 100));
-
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 bg-white">
       {/* Header */}
@@ -207,19 +203,7 @@ export const OnboardingWizard = () => {
           Adaptive questioning tailors your roadmap phases, DSA priorities, and workload units.
         </p>
 
-        {/* Dynamic Progress Indicator */}
-        <div className="mt-5 max-w-xs mx-auto">
-          <div className="flex justify-between text-xs text-[#64748B] font-medium mb-1.5">
-            <span>Question {questionNum}</span>
-            <span className="text-[11px] text-slate-400">Max limit: {maxLimit}</span>
-          </div>
-          <div className="w-full bg-[#E2E8F0] h-2 rounded-full overflow-hidden">
-            <div
-              className="bg-[#12B8A6] h-full transition-all duration-300 rounded-full"
-              style={{ width: `${Math.min(100, progressPercent)}%` }}
-            />
-          </div>
-        </div>
+        {/* Dynamic Progress Indicator completely removed to not show question numbers or limits */}
       </div>
 
       <Card className="bg-white p-6 sm:p-8 shadow-md border-[#E2E8F0]">

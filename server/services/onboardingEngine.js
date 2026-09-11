@@ -30,7 +30,7 @@ class OnboardingEngine {
     if (answeredCount >= 15) {
       return {
         completed: true,
-        reason: 'Maximum question limit (15) reached. Calibration complete.'
+        reason: 'Internal safety limit reached. Calibration complete.'
       };
     }
 
@@ -40,7 +40,6 @@ class OnboardingEngine {
     if (!previousAnswers.targetDomain) {
       return {
         id: 'targetDomain',
-        questionNumber: answeredCount + 1,
         title: 'What is your primary career target or focus?',
         subtitle: 'This anchors your curriculum phases, prerequisite trees, and opportunity matching.',
         type: 'single_select',
@@ -63,7 +62,6 @@ class OnboardingEngine {
     if (previousAnswers.targetDomain === 'Undecided' && !previousAnswers.explorationInterest) {
       return {
         id: 'explorationInterest',
-        questionNumber: answeredCount + 1,
         title: 'What areas sound most intriguing to explore first?',
         subtitle: 'CIE will build a cross-domain discovery roadmap with balanced foundational topics.',
         type: 'single_select',
@@ -88,7 +86,6 @@ class OnboardingEngine {
 
       return {
         id: 'domainProficiency',
-        questionNumber: answeredCount + 1,
         title: `What is your current practical baseline in ${target}?`,
         subtitle: 'CIE calibrates starting effort units so you never waste time on basics you already know.',
         type: 'single_select',
@@ -108,7 +105,6 @@ class OnboardingEngine {
     if (!previousAnswers.dsaPreference) {
       return {
         id: 'dsaPreference',
-        questionNumber: answeredCount + 1,
         title: 'How should Data Structures & Algorithms (DSA) be prioritized?',
         subtitle: 'CIE adapts phase ordering and workload units based on your explicit priority.',
         type: 'single_select',
@@ -145,9 +141,8 @@ class OnboardingEngine {
     if (!previousAnswers.dsaProficiency && previousAnswers.dsaPreference !== 'SkipForNow') {
       return {
         id: 'dsaProficiency',
-        questionNumber: answeredCount + 1,
         title: 'What is your current problem-solving and DSA comfort level?',
-        subtitle: 'Allows CIE to skip introductory arrays if you are already comfortable with two pointers.',
+        subtitle: 'Allows CIE to calibrate between foundational array patterns and advanced trees/graphs.',
         type: 'single_select',
         options: [
           { value: 'Beginner', label: 'Beginner (0–20 problems solved)', description: 'New to algorithmic problem solving or need structured foundations' },
@@ -157,7 +152,7 @@ class OnboardingEngine {
         allowOther: true,
         otherPlaceholder: 'Describe your problem solving background (e.g. LeetCode count, contest rating)...',
         required: true,
-        canFinishEarly: true // At question 4-5, baseline sufficiency is reached!
+        canFinishEarly: true
       };
     }
 
@@ -165,9 +160,8 @@ class OnboardingEngine {
     if (!previousAnswers.priorSkills) {
       return {
         id: 'priorSkills',
-        questionNumber: answeredCount + 1,
         title: 'Which technologies or topics have you ALREADY completed or built with?',
-        subtitle: 'CIE will mark mastered topics as completed and immediately unblock advanced units.',
+        subtitle: 'CIE will prioritize your skill gaps and streamline verification units.',
         type: 'multi_select',
         options: [
           { value: 'React', label: 'Modern React & Component Architecture' },
@@ -185,11 +179,30 @@ class OnboardingEngine {
       };
     }
 
-    // 6. Weekly Time Commitment
+    // 6. Practical Project / Production Experience
+    if (!previousAnswers.practicalProjects) {
+      return {
+        id: 'practicalProjects',
+        title: 'What is your current practical project or building experience?',
+        subtitle: 'Allows CIE to distinguish between pure theoretical knowledge and execution experience.',
+        type: 'single_select',
+        options: [
+          { value: 'StartingFresh', label: 'Starting Fresh', description: 'Focused primarily on coursework and theory; ready to build first real projects' },
+          { value: 'TutorialGuided', label: 'Guided / Coursework Projects', description: 'Built small tutorial projects or standard college course assignments' },
+          { value: 'FullProjects', label: '1–2 Independent Full Applications', description: 'Built and deployed complete functional apps, APIs or pipelines' },
+          { value: 'ProductionExperience', label: 'Production / Internship Experience', description: 'Real-world deployment, team collaboration, or industry internship work' }
+        ],
+        allowOther: true,
+        otherPlaceholder: 'Briefly describe any notable projects or repos you have built...',
+        required: false,
+        canFinishEarly: true
+      };
+    }
+
+    // 7. Weekly Time Commitment
     if (!previousAnswers.weeklyHours) {
       return {
         id: 'weeklyHours',
-        questionNumber: answeredCount + 1,
         title: 'How many hours can you realistically commit weekly?',
         subtitle: 'Workload is distributed into effort units. Missed days carry zero penalty.',
         type: 'slider',
@@ -203,11 +216,10 @@ class OnboardingEngine {
       };
     }
 
-    // 7. Academic Timeline & Graduation Year
+    // 8. Academic Timeline & Graduation Year
     if (!previousAnswers.graduationYear) {
       return {
         id: 'graduationYear',
-        questionNumber: answeredCount + 1,
         title: 'What is your expected graduation year?',
         subtitle: 'Used to calculate your readiness horizon and internship eligibility.',
         type: 'year_select',
@@ -217,11 +229,10 @@ class OnboardingEngine {
       };
     }
 
-    // 8. Primary Programming Language
+    // 9. Primary Programming Language
     if (!previousAnswers.primaryLanguage) {
       return {
         id: 'primaryLanguage',
-        questionNumber: answeredCount + 1,
         title: 'What is your primary programming language of choice?',
         subtitle: 'Helps match relevant practice problems and opportunity requirements.',
         type: 'single_select',
@@ -239,11 +250,10 @@ class OnboardingEngine {
       };
     }
 
-    // 9. Target Companies
+    // 10. Target Companies
     if (!previousAnswers.targetCompaniesCategory) {
       return {
         id: 'targetCompaniesCategory',
-        questionNumber: answeredCount + 1,
         title: 'What types of companies are you targeting?',
         subtitle: 'Allows CIE to calibrate between deep system interview rounds vs rapid product engineering.',
         type: 'multi_select',
@@ -302,14 +312,22 @@ class OnboardingEngine {
     const preferredPace = rawAnswers.preferredPace || 'Balanced';
 
     // 6. Resolve Estimated Proficiency Across Relevant Areas
-    const domainProf = rawAnswers.domainProficiency || extracted.developmentProficiency || 'Beginner';
-    const dsaProf = rawAnswers.dsaProficiency || extracted.dsaComfort || (dsaPreference === 'Intensive' ? 'Intermediate' : 'Beginner');
+    let domainProf = rawAnswers.domainProficiency || extracted.developmentProficiency || 'Beginner';
+    let dsaProf = rawAnswers.dsaProficiency || extracted.dsaComfort || (dsaPreference === 'Intensive' ? 'Intermediate' : 'Beginner');
+
+    const practicalProjects = rawAnswers.practicalProjects || (extracted.hasProductionExperience ? 'ProductionExperience' : null);
+    if (practicalProjects === 'ProductionExperience') {
+      if (domainProf === 'Beginner') domainProf = 'Intermediate';
+      else domainProf = 'Advanced';
+    } else if (practicalProjects === 'FullProjects' && domainProf === 'Beginner') {
+      domainProf = 'Intermediate';
+    }
 
     const estimatedProficiency = {
       dsa: dsaProf,
       development: domainProf,
-      coreCS: (domainProf === 'Advanced' || dsaProf === 'Advanced') ? 'Intermediate' : 'Beginner',
-      systemDesign: domainProf === 'Advanced' ? 'Intermediate' : 'Beginner'
+      coreCS: (domainProf === 'Advanced' || dsaProf === 'Advanced' || practicalProjects === 'ProductionExperience') ? 'Intermediate' : 'Beginner',
+      systemDesign: (domainProf === 'Advanced' || practicalProjects === 'ProductionExperience') ? 'Intermediate' : 'Beginner'
     };
 
     // 7. Resolve Self-Reported Skills (Separated from verified mastery!)
@@ -325,12 +343,15 @@ class OnboardingEngine {
 
     // 8. Interests & Languages
     const interests = [...(extracted.extractedInterests || [])];
+    if (rawAnswers.interests && Array.isArray(rawAnswers.interests)) {
+      interests.push(...rawAnswers.interests);
+    }
     if (targetDomain === 'Frontend') interests.push('React', 'CSS Architecture', 'UI Performance');
     else if (targetDomain === 'Backend') interests.push('REST APIs', 'SQL Databases', 'Distributed Systems');
     else if (targetDomain === 'AI/ML') interests.push('Machine Learning', 'Python', 'LLM Agents');
     else if (targetDomain === 'Cloud/DevOps') interests.push('Docker', 'CI/CD', 'Kubernetes');
     else if (targetDomain === 'Undecided') interests.push(rawAnswers.explorationInterest || 'Cross-Domain Exploration');
-    else interests.push('Full Stack Development', 'REST APIs', 'Modern Web');
+    else interests.push(`${targetDomain} Engineering`, 'Modern Systems Architecture');
 
     const knownLanguages = rawAnswers.primaryLanguage
       ? [rawAnswers.primaryLanguage]
@@ -347,6 +368,8 @@ class OnboardingEngine {
       selfReportedExperience: {
         domainProficiency: domainProf,
         dsaProficiency: dsaProf,
+        practicalProjects: practicalProjects || 'None',
+        practicalProjectsDescription: rawAnswers.practicalProjects_other || '',
         priorSkills,
         extracted
       },

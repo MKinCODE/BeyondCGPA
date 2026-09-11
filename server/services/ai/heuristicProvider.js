@@ -79,18 +79,18 @@ class HeuristicProvider {
       extractedInterests: []
     };
 
-    // 1. Domain Detection
-    if (combinedText.includes('frontend') || combinedText.includes('ui/ux') || combinedText.includes('react') || combinedText.includes('client-side') || combinedText.includes('css') || combinedText.includes('tailwind')) {
-      result.detectedDomain = 'Frontend';
-    } else if (combinedText.includes('ai') || combinedText.includes('machine learning') || combinedText.includes('llm') || combinedText.includes('pytorch') || combinedText.includes('deep learning') || combinedText.includes('data science') || combinedText.includes('model')) {
-      result.detectedDomain = 'AI/ML';
-    } else if (combinedText.includes('devops') || combinedText.includes('cloud') || combinedText.includes('docker') || combinedText.includes('kubernetes') || combinedText.includes('ci/cd') || combinedText.includes('infrastructure')) {
+    // 1. Domain Detection with word boundary matching
+    if (/\b(devops|cloud|docker|kubernetes|k8s|ci\/cd|infrastructure|terraform)\b/i.test(combinedText)) {
       result.detectedDomain = 'Cloud/DevOps';
-    } else if (combinedText.includes('backend') || combinedText.includes('api') || combinedText.includes('microservice') || combinedText.includes('server') || combinedText.includes('express') || combinedText.includes('django')) {
+    } else if (/\b(ai|artificial intelligence|machine learning|ml|llm|pytorch|deep learning|data science)\b/i.test(combinedText)) {
+      result.detectedDomain = 'AI/ML';
+    } else if (/\b(frontend|ui\/ux|react|client-side|css|tailwind|vue|angular)\b/i.test(combinedText)) {
+      result.detectedDomain = 'Frontend';
+    } else if (/\b(backend|api|apis|microservice|microservices|server|express|django|spring boot)\b/i.test(combinedText)) {
       result.detectedDomain = 'Backend';
-    } else if (combinedText.includes('fullstack') || combinedText.includes('full stack') || combinedText.includes('mern') || combinedText.includes('web development')) {
+    } else if (/\b(fullstack|full stack|mern|mean|web development)\b/i.test(combinedText)) {
       result.detectedDomain = 'Fullstack';
-    } else if (combinedText.includes('undecided') || combinedText.includes('not sure') || combinedText.includes('explore') || combinedText.includes('general')) {
+    } else if (/\b(undecided|not sure|explore|general)\b/i.test(combinedText)) {
       result.detectedDomain = 'Undecided';
     }
 

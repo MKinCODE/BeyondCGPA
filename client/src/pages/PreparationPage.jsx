@@ -19,7 +19,7 @@ import {
   Play,
   Filter
 } from 'lucide-react';
-import { preparationAPI } from '../services/api';
+import { preparationAPI, profileAPI } from '../services/api';
 import { useCIE } from '../context/CIEContext';
 
 const CATEGORIES = [
@@ -33,7 +33,7 @@ const CATEGORIES = [
 ];
 
 export const PreparationPage = () => {
-  const { roadmap, logPreparationEffort, refreshAll } = useCIE();
+  const { roadmap, logPreparationEffort, refreshAll, readiness, profile } = useCIE();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [isEffortModalOpen, setIsEffortModalOpen] = useState(false);
@@ -42,10 +42,27 @@ export const PreparationPage = () => {
   const [notes, setNotes] = useState('');
   const [confidence, setConfidence] = useState(4);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [weeklyHours, setWeeklyHours] = useState(profile?.weeklyHours || 14);
 
   useEffect(() => {
     refreshAll();
   }, []);
+
+  useEffect(() => {
+    if (profile?.weeklyHours) {
+      setWeeklyHours(profile.weeklyHours);
+    }
+  }, [profile?.weeklyHours]);
+
+  const handleAdjustWeeklyHours = async (newHours) => {
+    setWeeklyHours(newHours);
+    try {
+      await profileAPI.updateProfile({ weeklyHours: newHours });
+      await refreshAll();
+    } catch (err) {
+      console.error('Failed to update weekly hours:', err);
+    }
+  };
 
   const phases = roadmap?.phases || [];
 
@@ -106,6 +123,47 @@ export const PreparationPage = () => {
             <div className="border-l border-[#E2E8F0] pl-4">
               <span className="text-[#64748B]">Remaining: </span>
               <strong className="text-amber-700">{roadmap?.remainingUnits || 0} units</strong>
+            </div>
+          </div>
+        </div>
+      </ScrollReveal>
+
+      {/* Calculated Completion Horizon & Interactive Commitment Adjuster */}
+      <ScrollReveal direction="down" delay={60}>
+        <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge variant="teal" icon={Sparkles}>
+                Calculated Completion Horizon
+              </Badge>
+              <span className="text-xs font-bold text-[#087F73]">
+                {readiness?.readinessHorizon?.targetCompletionEstimate || '~6 months'}
+              </span>
+            </div>
+            <p className="text-xs text-[#64748B] leading-relaxed">
+              {readiness?.readinessHorizon?.rationale || 'Derived from remaining workload units, domain priorities, and weekly availability.'}
+            </p>
+          </div>
+
+          {/* Interactive Weekly Availability Slider */}
+          <div className="bg-white p-3 rounded-xl border border-[#E2E8F0] shrink-0 space-y-1.5 min-w-[260px]">
+            <div className="flex justify-between text-xs font-semibold text-[#0B172A]">
+              <span>Adjust Weekly Effort:</span>
+              <span className="text-[#087F73] font-bold">{weeklyHours} hrs / week</span>
+            </div>
+            <input
+              type="range"
+              min="4"
+              max="40"
+              step="2"
+              value={weeklyHours}
+              onChange={(e) => handleAdjustWeeklyHours(Number(e.target.value))}
+              className="w-full h-1.5 bg-[#E2E8F0] rounded-lg appearance-none cursor-pointer accent-[#12B8A6]"
+            />
+            <div className="flex justify-between text-[10px] text-[#64748B]">
+              <span>4 hrs (Light)</span>
+              <span>14 hrs (Standard)</span>
+              <span>40 hrs (Intensive)</span>
             </div>
           </div>
         </div>
