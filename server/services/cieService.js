@@ -65,7 +65,7 @@ class CIEService {
                 confidenceScore: 3
               }
             },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: 'after' }
           );
         }
 
@@ -93,7 +93,7 @@ class CIEService {
         lastAdaptedReason: 'Baseline profile calibration completed',
         lastAdaptedAt: new Date()
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Compute initial readiness horizon

@@ -54,7 +54,7 @@ class OpportunityService {
     const opportunity = await Opportunity.findOneAndUpdate(
       { deduplicationHash: normalized.deduplicationHash },
       { $set: normalized },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Trigger CIE matching and email alerts if not silenced (e.g. during batch seed)
@@ -242,7 +242,7 @@ class OpportunityService {
             status: 'Discovered'
           }
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
 
       // 9. Create in-app Notification

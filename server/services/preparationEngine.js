@@ -155,7 +155,7 @@ class PreparationEngine {
         remainingUnits: remaining,
         lastAdaptedAt: new Date()
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     const profile = await CareerProfile.findOne({ user: userId });
