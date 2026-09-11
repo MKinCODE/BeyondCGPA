@@ -18,8 +18,7 @@ import {
   User,
   KeyRound,
   CheckCircle2,
-  RefreshCw,
-  Crown
+  RefreshCw
 } from 'lucide-react';
 
 export const AuthPage = () => {
@@ -31,7 +30,6 @@ export const AuthPage = () => {
     loginWithPassword,
     requestSignupOTP,
     verifyOTPAndRegister,
-    adminQuickLogin,
     loginWithGoogle,
     isAuthenticated,
     user,
@@ -149,19 +147,6 @@ export const AuthPage = () => {
     }
   };
 
-  // Admin Quick Login
-  const handleAdminLogin = async () => {
-    setErrorMsg('');
-    setIsLoading(true);
-    try {
-      const res = await adminQuickLogin();
-      if (!res.success) {
-        setErrorMsg(res.message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const googleConfigured = diagnostics?.googleOAuth?.configured;
   const googleClientId =
@@ -457,7 +442,7 @@ export const AuthPage = () => {
               </span>
             </div>
 
-            {/* Google OAuth & Admin Quick Access */}
+            {/* Google OAuth */}
             <div className="space-y-2.5 pt-1">
               {googleConfigured && googleClientId ? (
                 <div ref={googleBtnRef} className="w-full flex justify-center min-h-[44px]" />
@@ -465,7 +450,7 @@ export const AuthPage = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setErrorMsg('Google OAuth client ID is not configured in server/.env. Please use Email/Password login or Admin Access below.');
+                    setErrorMsg('Google OAuth client ID is not configured. Please use Email/Password sign-in or create an account with OTP.');
                   }}
                   className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-[#E2E8F0] hover:bg-[#F8FAFC] text-xs font-semibold text-[#0B172A] transition-all cursor-pointer"
                 >
@@ -478,16 +463,6 @@ export const AuthPage = () => {
                   <span>Continue with Google</span>
                 </button>
               )}
-
-              {/* Instant Admin / Reviewer Access Button */}
-              <button
-                type="button"
-                onClick={handleAdminLogin}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#0B172A] hover:bg-[#1E293B] text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
-              >
-                <Crown className="w-3.5 h-3.5 text-[#12B8A6]" />
-                <span>Admin Quick Access (1-Click Review Login)</span>
-              </button>
             </div>
           </Card>
         </div>
