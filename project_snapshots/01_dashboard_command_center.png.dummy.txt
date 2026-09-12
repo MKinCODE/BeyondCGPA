@@ -1,5 +1,0 @@
-[DUMMY PLACEHOLDER: Replace this file by saving your screenshot as '01_dashboard_command_center.png']
-
-Target: Student Command Center Dashboard
-URL: http://localhost:5173/dashboard
-Capture: Today's Focus card, readiness horizon pill (~X months), pacing status badge, weekly velocity, and industry topic preview.
