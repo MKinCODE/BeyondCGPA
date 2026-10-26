@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node test_cie_audit.js"
+    "test": "node test_cie_audit.js && node test_opportunity_sync.js",
+    "test:cie": "node test_cie_audit.js",
+    "test:opp": "node test_opportunity_sync.js"
   },
   "keywords": [],
   "author": "",

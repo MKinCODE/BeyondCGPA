@@ -73,17 +73,49 @@ const opportunitySchema = new mongoose.Schema(
     },
     isActive: {
       type: Boolean,
-      default: true
+      default: true,
+      index: true
     },
     deduplicationHash: {
       type: String,
       unique: true,
       required: true
+    },
+    verificationVotes: {
+      upvotes: { type: Number, default: 0 },
+      downvotes: { type: Number, default: 0 }
+    },
+    verifiedByUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
+    ],
+    reportedClosedByUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
+    ],
+    lastVerifiedAt: {
+      type: Date,
+      default: Date.now
+    },
+    reportCount: {
+      type: Number,
+      default: 0
+    },
+    expiryReason: {
+      type: String,
+      default: ''
     }
   },
   {
     timestamps: true
   }
 );
+
+opportunitySchema.index({ isActive: 1, deadline: 1 });
+opportunitySchema.index({ isActive: 1, postedDate: -1 });
 
 module.exports = mongoose.model('Opportunity', opportunitySchema);

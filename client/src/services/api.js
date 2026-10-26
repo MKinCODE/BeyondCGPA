@@ -89,7 +89,9 @@ export const topicAPI = {
 export const opportunityAPI = {
   getFeed: (params) => api.get('/opportunities/feed', { params }),
   getTracked: () => api.get('/opportunities/tracked'),
-  updateStatus: (opportunityId, data) => api.put(`/opportunities/${opportunityId}/status`, data)
+  updateStatus: (opportunityId, data) => api.put(`/opportunities/${opportunityId}/status`, data),
+  submitFeedback: (opportunityId, data) => api.post(`/opportunities/${opportunityId}/feedback`, data),
+  syncOpportunities: () => api.post('/opportunities/sync')
 };
 
 // AI Mentor APIs

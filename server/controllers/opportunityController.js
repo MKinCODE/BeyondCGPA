@@ -1,14 +1,18 @@
 const opportunityService = require('../services/opportunityService');
+const opportunitySyncService = require('../services/opportunitySyncService');
 const OpportunityMatch = require('../models/OpportunityMatch');
 const Opportunity = require('../models/Opportunity');
 
 /**
- * Get personalized CIE-ranked opportunities feed
+ * Get personalized CIE-ranked opportunities feed with smart daily background sync
  */
 const getOpportunitiesFeed = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { type, workplaceType } = req.query;
+
+    // Automatically check for daily refresh & clean up expired postings (cached, runs <= once every 12h)
+    await opportunitySyncService.syncDailyOpportunities();
 
     const feed = await opportunityService.getStudentOpportunityFeed(userId, { type, workplaceType });
 
@@ -95,6 +99,36 @@ const notifyOpportunityMatches = async (req, res, next) => {
       message: `Alerts dispatched: ${result.notifiedCount} students notified, ${result.skippedCount} skipped`,
       ...result
     });
+/**
+ * Submit community feedback on whether a job posting still exists/is active
+ */
+const submitOpportunityFeedback = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { opportunityId } = req.params;
+    const { isStillOpen, reason } = req.body;
+
+    const result = await opportunitySyncService.recordCommunityFeedback(userId, opportunityId, { isStillOpen, reason });
+    res.status(200).json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Trigger explicit opportunity sync & fresh roles ingestion
+ */
+const triggerOpportunitySync = async (req, res, next) => {
+  try {
+    const result = await opportunitySyncService.syncDailyOpportunities({ force: true });
+    res.status(200).json({
+      success: true,
+      message: 'Opportunity sync completed successfully',
+      ...result
+    });
   } catch (error) {
     next(error);
   }
@@ -105,5 +139,7 @@ module.exports = {
   updateOpportunityStatus,
   getTrackedApplications,
   ingestOpportunity,
-  notifyOpportunityMatches
+  notifyOpportunityMatches,
+  submitOpportunityFeedback,
+  triggerOpportunitySync
 };
