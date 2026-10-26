@@ -99,6 +99,11 @@ const notifyOpportunityMatches = async (req, res, next) => {
       message: `Alerts dispatched: ${result.notifiedCount} students notified, ${result.skippedCount} skipped`,
       ...result
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * Submit community feedback on whether a job posting still exists/is active
  */
