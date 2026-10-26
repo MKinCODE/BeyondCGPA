@@ -375,10 +375,19 @@ class CIEService {
       adaptationReason = `Steady progress logged on ${topic.title}`;
     }
 
-    // 2. Recalculate Roadmap unit totals
+    // 2. Recalculate Roadmap unit totals strictly for topics belonging to the active roadmap
+    const activeTopicIds = new Set();
+    (roadmap.phases || []).forEach(phase => {
+      (phase.topics || []).forEach(t => {
+        const idStr = t.topic?._id ? t.topic._id.toString() : t.topic?.toString();
+        if (idStr) activeTopicIds.add(idStr);
+      });
+    });
+
     const allProgress = await PreparationProgress.find({ user: userId });
-    const totalAllocated = allProgress.reduce((acc, p) => acc + (p.totalAllocatedUnits || 0), 0);
-    const completed = allProgress.reduce((acc, p) => acc + (p.completedUnits || 0), 0);
+    const roadmapProgress = allProgress.filter(p => activeTopicIds.has(p.topic.toString()));
+    const totalAllocated = roadmapProgress.reduce((acc, p) => acc + (p.totalAllocatedUnits || 0), 0);
+    const completed = roadmapProgress.reduce((acc, p) => acc + (p.completedUnits || 0), 0);
     const remaining = Math.max(0, totalAllocated - completed);
 
     roadmap.totalAllocatedUnits = totalAllocated;
@@ -389,12 +398,13 @@ class CIEService {
     roadmap.lastAdaptedAt = new Date();
     await roadmap.save();
 
-    // 3. Recalculate readiness horizon & pacing health
+    // 3. Recalculate readiness horizon & pacing health with priority-weighted phases
     const readinessHorizon = this.calculateReadinessHorizon({
       totalUnits: totalAllocated,
       completedUnits: completed,
       weeklyHours: profile.weeklyHours || 14,
-      velocityMultiplier
+      velocityMultiplier,
+      phases: roadmap.phases
     });
 
     const pacingHealth = this.calculatePacingHealth(

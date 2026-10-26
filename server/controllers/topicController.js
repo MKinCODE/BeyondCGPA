@@ -1,7 +1,9 @@
 const IndustryTopic = require('../models/IndustryTopic');
+const industryTopicService = require('../services/industryTopicService');
 
 /**
  * Get Today's Topic or topic for a specific date (YYYY-MM-DD)
+ * Dynamically generates and persists the topic to MongoDB if not already present.
  */
 const getTopicByDate = async (req, res, next) => {
   try {
@@ -9,12 +11,7 @@ const getTopicByDate = async (req, res, next) => {
     // Default to today's date in YYYY-MM-DD format
     const targetDate = req.params.date || new Date().toISOString().split('T')[0];
 
-    let topic = await IndustryTopic.findOne({ date: targetDate });
-
-    // Fallback: If exact date not found, get most recent topic
-    if (!topic) {
-      topic = await IndustryTopic.findOne().sort({ date: -1 });
-    }
+    const topic = await industryTopicService.getOrGenerateTopicForDate(targetDate);
 
     if (!topic) {
       return res.status(404).json({
@@ -28,7 +25,7 @@ const getTopicByDate = async (req, res, next) => {
     res.status(200).json({
       success: true,
       topic: {
-        ...topic.toObject(),
+        ...(topic.toObject ? topic.toObject() : topic),
         isViewed
       }
     });
@@ -38,12 +35,17 @@ const getTopicByDate = async (req, res, next) => {
 };
 
 /**
- * Get Historical Calendar overview (past 30-60 days)
+ * Get Historical Calendar overview (past 30 days)
  * Displays topic availability and read status without streak pressure.
+ * Dynamically backfills & safely persists any missing past days so history is always complete.
  */
 const getCalendarOverview = async (req, res, next) => {
   try {
     const userId = req.user?._id;
+
+    // Ensure all 30 days up to today have generated and persisted topics in MongoDB
+    await industryTopicService.ensureCalendarHistoryTopics(30);
+
     const allTopics = await IndustryTopic.find().select('title slug date category viewedBy').sort({ date: -1 });
 
     const topicsByDate = new Map();

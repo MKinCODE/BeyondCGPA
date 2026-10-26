@@ -42,13 +42,42 @@ class PreparationEngine {
         ? `Reinforcement Focus: consolidating ${active.topic.title} before advancing`
         : `Continue active workload unit in ${active.topic.title}`;
 
+      // Surface Actionable Practice Task with verified links
+      const practiceQuestions = active.topic.practiceQuestions || [];
+      let actionableTask = null;
+      if (practiceQuestions.length > 0) {
+        const completedSet = new Set(active.completedQuestions || []);
+        const taskObj = practiceQuestions.find(q => !completedSet.has(q.title)) || practiceQuestions[0];
+        if (taskObj) {
+          actionableTask = {
+            title: taskObj.title,
+            difficulty: taskObj.difficulty || 'Medium',
+            platform: taskObj.platform || 'LeetCode',
+            url: taskObj.url || '',
+            description: taskObj.description || ''
+          };
+        }
+      }
+
+      const allocations = [
+        {
+          category: active.topic.category,
+          topicTitle: active.topic.title,
+          recommendedUnits: 1,
+          timeEstimateMinutes: 45,
+          type: isStruggling ? 'Reinforcement Unit' : 'Active Continuation'
+        }
+      ];
+
       return {
         topic: active.topic,
         progress: active,
         reason,
         category: active.topic.category,
         isUnblocked: true,
-        isReinforcement: isStruggling
+        isReinforcement: isStruggling,
+        actionableTask,
+        allocations
       };
     }
 

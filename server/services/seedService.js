@@ -673,6 +673,175 @@ const initialPreparationTopics = [
       'Implement keyboard navigation and ARIA landmarks',
       'Optimize client asset bundles with dynamic imports'
     ]
+  },
+  {
+    title: 'Applied AI/ML Production Capstone: Autonomous RAG & Multimodal Pipeline',
+    slug: 'applied-aiml-production-capstone',
+    category: 'Projects',
+    domainRelevance: ['AI/ML'],
+    difficulty: 'Advanced',
+    allocatedEffortUnits: 5,
+    order: 19,
+    prerequisites: ['llm-engineering-vector-databases'],
+    summary: 'Building an enterprise-ready autonomous agent pipeline with vector search, semantic caching, reranking, and live API serving.',
+    keyConcepts: [
+      {
+        title: 'Production RAG Architecture',
+        description: 'Multi-stage retrieval, hybrid dense/sparse search, cross-encoder reranking, and latency-budgeted LLM streaming.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Ship Enterprise Document Q&A with Pinecone & FastAPI',
+        difficulty: 'Hard',
+        platform: 'AI Project Showcase',
+        url: 'https://github.com/langchain-ai/rag-from-scratch',
+        description: 'Deploy an inference service with vector similarity search, citation verification, and token streaming.'
+      }
+    ],
+    actionableChecklist: [
+      'Implement hybrid sparse and dense vector search',
+      'Deploy streaming inference API with FastAPI and Docker'
+    ]
+  },
+  {
+    title: 'DevOps & Cloud Infrastructure Capstone: Scalable Kubernetes GitOps Engine',
+    slug: 'devops-kubernetes-gitops-capstone',
+    category: 'Projects',
+    domainRelevance: ['Cloud/DevOps'],
+    difficulty: 'Advanced',
+    allocatedEffortUnits: 5,
+    order: 20,
+    prerequisites: ['cicd-pipelines-cloud-infrastructure'],
+    summary: 'Architecting an automated GitOps deployment engine on Kubernetes with Prometheus observability, ingress routing, and automated rollbacks.',
+    keyConcepts: [
+      {
+        title: 'GitOps Declarative Reconciler',
+        description: 'ArgoCD/Flux pattern where Git repository commits represent the single source of truth for desired cluster state.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Deploy Automated GitOps Pipeline with Helm & ArgoCD',
+        difficulty: 'Hard',
+        platform: 'Kubernetes GitOps Lab',
+        url: 'https://argo-cd.readthedocs.io/en/stable/getting_started/',
+        description: 'Set up an automated reconciliation loop tracking Git manifest changes with zero-downtime canary rollouts.'
+      }
+    ],
+    actionableChecklist: [
+      'Configure automated canary deployments with traffic shifting',
+      'Implement Prometheus alerts for error budgets and SLIs'
+    ]
+  },
+  {
+    title: 'Dynamic Programming: 1D/2D Memoization & Tabulation Patterns',
+    slug: 'dynamic-programming-patterns',
+    category: 'DSA',
+    domainRelevance: ['Fullstack', 'Backend', 'Frontend', 'AI/ML', 'Cloud/DevOps', 'All'],
+    difficulty: 'Advanced',
+    allocatedEffortUnits: 4,
+    order: 21,
+    prerequisites: ['arrays-and-two-pointers'],
+    summary: 'Optimal substructure, overlapping subproblems, 0/1 Knapsack, Longest Common Subsequence, and state transition equations.',
+    keyConcepts: [
+      {
+        title: 'Top-Down Memoization vs Bottom-Up Tabulation',
+        description: 'Formulating recursive recurrence relations and caching intermediate states to reduce exponential O(2^N) to polynomial time.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Coin Change',
+        difficulty: 'Medium',
+        platform: 'LeetCode',
+        url: 'https://leetcode.com/problems/coin-change/',
+        description: 'Compute the fewest number of coins that you need to make up that amount.'
+      },
+      {
+        title: 'Longest Increasing Subsequence',
+        difficulty: 'Medium',
+        platform: 'LeetCode',
+        url: 'https://leetcode.com/problems/longest-increasing-subsequence/',
+        description: 'Find the length of the longest strictly increasing subsequence.'
+      }
+    ],
+    actionableChecklist: [
+      'Identify recurrence relations and base cases',
+      'Optimize 2D DP matrices to 1D rolling arrays'
+    ]
+  },
+  {
+    title: 'Binary Search & Search Space Optimization',
+    slug: 'binary-search-optimization',
+    category: 'DSA',
+    domainRelevance: ['Fullstack', 'Backend', 'Frontend', 'AI/ML', 'Cloud/DevOps', 'All'],
+    difficulty: 'Intermediate',
+    allocatedEffortUnits: 3,
+    order: 22,
+    prerequisites: ['arrays-and-two-pointers'],
+    summary: 'Binary search on sorted arrays, lower/upper bounds, and binary search on monotonic answer spaces.',
+    keyConcepts: [
+      {
+        title: 'Search on Answer Space',
+        description: 'Using predicate feasibility functions (canAchieve(mid)) to find optimal thresholds in O(log(Max-Min)).'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Koko Eating Bananas',
+        difficulty: 'Medium',
+        platform: 'LeetCode',
+        url: 'https://leetcode.com/problems/koko-eating-bananas/',
+        description: 'Find minimum eating speed k such that Koko can eat all bananas within h hours.'
+      },
+      {
+        title: 'Search in Rotated Sorted Array',
+        difficulty: 'Medium',
+        platform: 'LeetCode',
+        url: 'https://leetcode.com/problems/search-in-rotated-sorted-array/',
+        description: 'Search target in sorted array rotated at an unknown pivot index in O(log n).'
+      }
+    ],
+    actionableChecklist: [
+      'Master left < right vs left <= right boundary conditions',
+      'Formulate monotonic boolean condition for answer binary search'
+    ]
+  },
+  {
+    title: 'Technical Interview Readiness, System Architecture Walkthroughs & Behavioral Framing',
+    slug: 'technical-interview-readiness',
+    category: 'InterviewPrep',
+    domainRelevance: ['Fullstack', 'Backend', 'Frontend', 'AI/ML', 'Cloud/DevOps', 'All'],
+    difficulty: 'Intermediate',
+    allocatedEffortUnits: 3,
+    order: 23,
+    prerequisites: [],
+    summary: 'Mock technical coding communication, clarifying edge cases, STAR behavioral interview framing, and live technical trade-off articulation.',
+    keyConcepts: [
+      {
+        title: 'Communication & Problem Dissection Framework',
+        description: 'Thinking out loud, stating assumptions, writing test cases before coding, and proactive complexity analysis.'
+      },
+      {
+        title: 'STAR Method for Behavioral Alignment',
+        description: 'Structuring leadership, conflict resolution, and technical failure stories with quantifiable impact.'
+      }
+    ],
+    practiceQuestions: [
+      {
+        title: 'Tech Interview Handbook - Live Coding Rubric',
+        difficulty: 'Medium',
+        platform: 'Interview Handbook',
+        url: 'https://www.techinterviewhandbook.org/coding-interview-cheatsheet/',
+        description: 'Comprehensive 20-point checklist for problem clarification, code structuring, and complexity communication.'
+      }
+    ],
+    actionableChecklist: [
+      'Practice 45-minute timed mock interview out loud',
+      'Prepare 4 STAR stories for leadership and technical challenges',
+      'Explain Big-O trade-offs crisply before typing code'
+    ]
   }
 ];
 
@@ -948,6 +1117,10 @@ const seedDatabase = async () => {
       }
       console.log(`✅ Seeded ${initialOpportunities.length} Opportunities.`);
     }
+
+    // 4. Ensure past 30 days are dynamically populated & safe in DB
+    const industryTopicService = require('./industryTopicService');
+    await industryTopicService.ensureCalendarHistoryTopics(30);
   } catch (error) {
     console.error('❌ Error seeding database:', error.message);
   }

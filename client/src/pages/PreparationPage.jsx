@@ -29,7 +29,9 @@ const CATEGORIES = [
   { id: 'DBMS', label: 'Databases & SQL' },
   { id: 'SystemDesign', label: 'System Design' },
   { id: 'OS', label: 'Operating Systems' },
-  { id: 'Projects', label: 'Production Projects' }
+  { id: 'OOP', label: 'OOP & Architecture' },
+  { id: 'Projects', label: 'Production Projects' },
+  { id: 'InterviewPrep', label: 'Interview Preparation' }
 ];
 
 export const PreparationPage = () => {

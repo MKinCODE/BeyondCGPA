@@ -26,7 +26,8 @@ const getReadinessAnalysis = async (req, res, next) => {
       totalUnits: totalAllocated,
       completedUnits: completed,
       weeklyHours: profile.weeklyHours || 14,
-      velocityMultiplier
+      velocityMultiplier,
+      phases: roadmap?.phases
     });
 
     const pacingHealth = cieService.calculatePacingHealth(
